@@ -19,11 +19,18 @@
 		DropdownHeader,
 		DropdownItem,
 		Indicator,
-		Listgroup, Toast 
+		Listgroup,
+		Toast
 	} from 'flowbite-svelte';
-	import { ChevronDownOutline, BellRingSolid, CloseSolid, InboxSolid, FireOutline } from 'flowbite-svelte-icons';
+	import {
+		ChevronDownOutline,
+		BellRingSolid,
+		CloseSolid,
+		InboxSolid,
+		FireOutline
+	} from 'flowbite-svelte-icons';
 	import { consistentLowMoods, focusTable, newRequest } from '$lib/stores/index.js';
-	import { requestTypes, requestStatus, mood, reason  } from '$lib/constants/index.js';
+	import { requestTypes, requestStatus, mood, reason } from '$lib/constants/index.js';
 	import {
 		//logoOg,
 		moodTrailOG
@@ -31,16 +38,17 @@
 
 	export let data;
 
-	const navDivClass = 'flex items-center justify-between container z-50 relative';
+	const navDivClass = 'flex items-center justify-between container z-50 relative !px-0';
 	const activeClass = 'text-blue-700 font-semibold';
 	const chevronClass = 'w-3 h-3 ml-2 text-primary-800 dark:text-white inline focus:outline-0';
 	const avatarClass = 'cursor-pointer fixed';
 
-	let newLowMoodData = false;
-	let currStudentIDNotif = '';
-	let consistentStreaksInfo = new Map();
 	const students = [];
 
+	let consistentStreaksInfo = new Map();
+
+	let newLowMoodData = false;
+	let currStudentIDNotif = '';
 	let notifText = '';
 
 	let currentUser = {
@@ -57,94 +65,37 @@
 	$: pendingReqs = data.pendingRequests;
 	$: lowMoods = data.lowMoods;
 
-	$: activeUrl === '/dashboard' ? mainDivClass = 'pb-2 pt-2 bg-zinc-100' : mainDivClass = 'pb-2 pt-2';
+	$: mainDivClass = activeUrl === '/dashboard' ? 'pb-2 pt-2 bg-zinc-100' : 'pb-2 pt-2';
 
-	$: {
-		if (session) {
-			currentUser.email = session.user.email;
-			currentUser.username = session.user.user_metadata.username;
-			currentUser.role = session.user.user_metadata.role;
+	const handleUserInfo = async () => {
+		const { data: user, error } = await supabase
+			.from('Users')
+			.select('*')
+			.eq('email', session.user.email)
+			.single();
+
+		if (user && !error) {
+			currentUser = {
+				email: session.user.email,
+				username: user.username,
+				role: user.role
+			};
 		}
-	}
+	};
 
-	onMount(async () => {
-		const { data: { subscription } } = supabase.auth.onAuthStateChange((event, _session) => {
-			console.log(event);
-			if (_session?.expires_at !== session?.expires_at) {
-				invalidate('supabase:auth');
-			}
-		});
-		
-		const reqChann = supabase.channel('reqChann')
-			.on('postgres_changes', {
-				event: '*',
-					schema: 'public',
-					table: 'Request'
-				},(payload) => {
-					if (payload.eventType === 'INSERT') {
-						newRequest.update(() => true);
-						requestsData = _.cloneDeep([payload.new, ...requestsData]);
-						pendingReqs = requestsData.filter((req) => req.iscompleted === false);
-						//console.log(requestsData.length, pendingReqs.length)
-					} else if (payload.eventType === 'UPDATE') {
-						const updatedIndex = requestsData.findIndex((req) => req.id === payload.old.id);
-
-						if (updatedIndex !== -1) {
-							requestsData.splice(updatedIndex, 1);
-						}
-
-						requestsData = _.cloneDeep(requestsData);
-					}
-				}
-			).on('postgres_changes', {
-					event: '*',
-					schema: 'public',
-					table: 'StudentMoodEntries'
-				},(payload) => {
-					if (payload.eventType === 'INSERT') {
-						lowMoods = _.cloneDeep([...lowMoods, payload.new]);
-						lowMoods = lowMoods.filter((student) => student.mood_score < 0);
-						lowMoods.sort((currentElem, nextElem) => { // sort by date (asc)
-							const currentDate = new Date(currentElem.created_at);
-							const nextDate = new Date(nextElem.created_at);
-							return currentDate - nextDate;
-						});
-					} else if (payload.eventType === 'UPDATE') {
-						const updatedIndex = lowMoods.findIndex((student) => student.id === payload.old.id);
-
-						if (updatedIndex !== -1) {
-							lowMoods[updatedIndex] = payload.new;
-						}
-
-						lowMoods = _.cloneDeep(lowMoods);
-					} else if (payload.eventType === 'DELETE') {
-						const updatedlowMoods = lowMoods.filter(
-							(student) => student.id !== payload.old.id
-						);
-						lowMoods = updatedlowMoods;
-					}
-				}
-			).subscribe(); // (status) => console.log(activeUrl,status));
-
-		return () => {
-			subscription.unsubscribe();
-			reqChann.unsubscribe();
-		};
-	});
-
-	$: if (lowMoods) {
+	const calculateLowMoods = () => {
 		let formattedData = new Map();
 		let consecutiveDaysMap = new Map();
-		consistentLowMoods.set([]); //avoid duplicates
+		consistentLowMoods.set([]);
 
 		// keep track of the maximum number of consecutive low mood days encountered
-		let maxConsecutiveDays = 0; 
-		
+		let maxConsecutiveDays = 0;
+
 		formattedData = lowMoods?.reduce(
 			// extract the student id, mood score, created at, and reason score from each entry
 			(students, { student_id, mood_score, created_at, reason_score }) => {
 				if (!created_at) {
-					// if created_at is null 
+					// if created_at is null
 					return students; // skip this entry
 				}
 
@@ -156,7 +107,7 @@
 				});
 
 				// get the student's data or create a new map()
-				const studentData = students.get(student_id) || new Map(); 
+				const studentData = students.get(student_id) || new Map();
 
 				// get the reason label from the reason score using reason object
 				const reason_label = Object.keys(reason).find((key) => reason[key] === reason_score);
@@ -173,22 +124,22 @@
 			new Map()
 		);
 
- 		for (const [studentId, studentEntry] of formattedData) {
+		for (const [studentId, studentEntry] of formattedData) {
 			// variable to be used for tracking consecutive low mood days
-			let consecutiveDays = 0; 
+			let consecutiveDays = 0;
 
 			// variable to be used for checking if the current date is the next day of the previous date
-			let previousDate = null; 
+			let previousDate = null;
 
 			// variable to be used for storing the current streak data
-			let currentStreakData = null; 
+			let currentStreakData = null;
 
-			// for each date of mood data for a student, 
+			// for each date of mood data for a student,
 			// calculate the consecutive low mood days
 			for (const [dateKey, moodData] of studentEntry) {
 				const currentDate = dayjs(dateKey);
 
-				// if the current date is the next day of the previous date, 
+				// if the current date is the next day of the previous date,
 				// then increment the consecutive days
 				if (previousDate === null || currentDate.diff(previousDate, 'day') === 1) {
 					consecutiveDays++;
@@ -196,28 +147,28 @@
 					// else, reset the consecutive days to 1
 					consecutiveDays = 1;
 				}
-				
-				// if the consecutive days is >= to 4, 
+
+				// if the consecutive days is >= to 4,
 				// then check if the previous date is the day before the current date
 				if (consecutiveDays >= 4) {
-					// get the last record of the student's streaks 
+					// get the last record of the student's streaks
 					// which is the last element of the array
-					const lastRecord = (consecutiveDaysMap?.get(studentId) || []).slice(-1)[0]; 
-		
-					// if the last record's end date is the day before the current date, 
+					const lastRecord = (consecutiveDaysMap?.get(studentId) || []).slice(-1)[0];
+
+					// if the last record's end date is the day before the current date,
 					// then update the last record
 					if (
 						lastRecord &&
 						lastRecord.endDate === currentDate.subtract(1, 'day').format('MM/DD/YYYY')
 					) {
-						
 						lastRecord.endDate = currentDate.format('MM/DD/YYYY'); // update the end date
 						lastRecord.moodScores.push(...moodData.moodScores); // add the mood scores
 						lastRecord.reasonLabels.push(...moodData.reasonLabels); // and reason labels
-					} else { // else, create a new record
+					} else {
+						// else, create a new record
 
 						// update the maximum consecutive days
-						maxConsecutiveDays = Math.max(maxConsecutiveDays, consecutiveDays); 
+						maxConsecutiveDays = Math.max(maxConsecutiveDays, consecutiveDays);
 
 						// create a new record with the start date, end date, mood scores, and reason labels
 						currentStreakData = {
@@ -237,10 +188,10 @@
 							// get the mood scores and reason labels of the streak date
 							const streakMoodData = studentEntry.get(streakDate);
 
-							// if there is mood data for the streak date, 
+							// if there is mood data for the streak date,
 							// then add the mood scores and reason labels to the current streak data
 							if (streakMoodData) {
-								currentStreakData.moodScores.push(...streakMoodData.moodScores); 
+								currentStreakData.moodScores.push(...streakMoodData.moodScores);
 								currentStreakData.reasonLabels.push(...streakMoodData.reasonLabels);
 							}
 						}
@@ -264,15 +215,15 @@
 				moodScores: streak.moodScores,
 				reasonLabels: streak.reasonLabels
 			}));
-			
+
 			newLowMoodData = true;
 			// `moods` is the current value of the store
 			// add a new entry for a student’s streaks to the consistentLowMoods store.
 			consistentLowMoods?.update((moods) => [...moods, { studentId, streaks: studentStreaks }]);
-		}); 
-	}
+		});
+	};
 
-	$: if(consistentLowMoods){
+	const updateConsistentLowMoods = () => {
 		consistentLowMoods.subscribe((updatedMoods) => {
 			updatedMoods.forEach((moodEntry) => {
 				const studentId = moodEntry.studentId;
@@ -303,37 +254,145 @@
 				}
 			});
 		});
+	};
+
+	$: {
+		if (session) {
+			handleUserInfo();
+		}
 	}
+
+	$: if (lowMoods) {
+		calculateLowMoods();
+	}
+
+	$: if (consistentLowMoods) {
+		updateConsistentLowMoods();
+	}
+
+	onMount(async () => {
+		const {
+			data: { subscription }
+		} = supabase.auth.onAuthStateChange((event, _session) => {
+			console.log(event);
+			if (_session?.expires_at !== session?.expires_at) {
+				invalidate('supabase:auth');
+			}
+		});
+
+		const reqChann = supabase
+			.on(
+				'postgres_changes',
+				{
+					event: '*',
+					schema: 'public',
+					table: 'Request'
+				},
+				(payload) => {
+					if (payload.eventType === 'INSERT') {
+						newRequest.update(() => true);
+						requestsData = _.cloneDeep([payload.new, ...requestsData]);
+						pendingReqs = requestsData.filter((req) => req.iscompleted === false);
+						//console.log(requestsData.length, pendingReqs.length)
+					} else if (payload.eventType === 'UPDATE') {
+						const updatedIndex = requestsData.findIndex((req) => req.id === payload.old.id);
+
+						if (updatedIndex !== -1) {
+							requestsData.splice(updatedIndex, 1);
+						}
+
+						requestsData = _.cloneDeep(requestsData);
+					}
+				}
+			)
+			.on(
+				'postgres_changes',
+				{
+					event: '*',
+					schema: 'public',
+					table: 'StudentMoodEntries'
+				},
+				(payload) => {
+					if (payload.eventType === 'INSERT') {
+						lowMoods = _.cloneDeep([...lowMoods, payload.new]);
+						lowMoods = lowMoods.filter((student) => student.mood_score < 0);
+						lowMoods.sort((currentElem, nextElem) => {
+							// sort by date (asc)
+							const currentDate = new Date(currentElem.created_at);
+							const nextDate = new Date(nextElem.created_at);
+							return currentDate - nextDate;
+						});
+					} else if (payload.eventType === 'UPDATE') {
+						const updatedIndex = lowMoods.findIndex((student) => student.id === payload.old.id);
+
+						if (updatedIndex !== -1) {
+							lowMoods[updatedIndex] = payload.new;
+						}
+
+						lowMoods = _.cloneDeep(lowMoods);
+					} else if (payload.eventType === 'DELETE') {
+						const updatedlowMoods = lowMoods.filter((student) => student.id !== payload.old.id);
+						lowMoods = updatedlowMoods;
+					}
+				}
+			)
+			.subscribe(); // (status) => console.log(activeUrl,status));
+
+		return () => {
+			subscription.unsubscribe();
+			reqChann.unsubscribe();
+		};
+	});
 </script>
 
-<Navbar class="bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border-gray-100 dark:border-gray-700 divide-gray-100 dark:divide-gray-700 px-2 sm:px-4 drop-shadow-sm w-full relative z-20 print:hidden flex justify-center py-2.5" {navDivClass}>
+<Navbar
+	class="!px-0 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border-gray-100 dark:border-gray-700 divide-gray-100 dark:divide-gray-700 drop-shadow-sm w-full relative z-20 print:hidden flex justify-center py-2.5"
+	{navDivClass}
+>
 	{#if session}
 		<div class="flex flex-row space-x-3">
 			<NavBrand tabindex="-1" href="/dashboard">
 				<img src={moodTrailOG} alt="Placeholder Logo" class="w-32 h-fit" />
 			</NavBrand>
-	
+
 			{#if activeUrl != '/requests'}
 				<div>
 					<label for="notification-menu">
 						<Button class="relative focus:ring-2" size="sm" id="notification-menu">
 							<InboxSolid class="outline-none text-white dark:text-white" />
 							<span class="sr-only">Notifications</span>
-							<Indicator color="blue" border size="xl" placement="top-right" class="text-xs font-bold">
+							<Indicator
+								color="blue"
+								border
+								size="xl"
+								placement="top-right"
+								class="text-xs font-bold"
+							>
 								{pendingReqs.length ?? 0}
 							</Indicator>
 						</Button>
 					</label>
-					<Dropdown class="relative z-50 shadow-md rounded shadow-slate-300" placement="bottom" triggeredBy="#notification-menu">
+					<Dropdown
+						class="relative z-50 shadow-md rounded shadow-slate-300"
+						placement="bottom"
+						triggeredBy="#notification-menu"
+					>
 						<div class="flex flex-col flex-wrap outline-red-500 max-w-fit rounded-lg space-y-2 p-3">
 							<div class="flex justify-between items-center mb-4">
 								<h5 class="text-base font-semibold leading-none text-gray-900">Pending Requests</h5>
-								<a href="/requests"	class="text-sm font-medium text-primary-600 hover:underline dark:text-primary-500">
+								<a
+									href="/requests"
+									class="text-sm font-medium text-primary-600 hover:underline dark:text-primary-500"
+								>
 									View all
 								</a>
 							</div>
 							{#if pendingReqs}
-								<Listgroup items={pendingReqs.slice(0, 4)} let:item class="border-0 dark:!bg-transparent">
+								<Listgroup
+									items={pendingReqs.slice(0, 4)}
+									let:item
+									class="border-0 dark:!bg-transparent"
+								>
 									<div class="flex items-center space-x-4 rtl:space-x-reverse">
 										<div class="flex-1 min-w-0">
 											<p class="text-sm font-medium text-gray-900 truncate dark:text-white">
@@ -390,7 +449,7 @@
 					<DropdownItem href="/settings/manage-users">Manage Users</DropdownItem>
 				{/if}
 				<DropdownDivider />
-<!-- 				<DropdownItem class="italic font-light">moodtrail.supp@gmail.com</DropdownItem>
+				<!-- 				<DropdownItem class="italic font-light">moodtrail.supp@gmail.com</DropdownItem>
 				<DropdownDivider /> -->
 				<form method="POST" action="/logout">
 					<DropdownItem type="submit">Log out</DropdownItem>
@@ -405,10 +464,8 @@
 		{#if activeUrl != '/login/'}
 			<Button href="/login" color="purple" class="mr-3 font-semibold tracking-wide">LOGIN</Button>
 		{:else}
-			<Button
-				disabled
-				color="purple"
-				class="mr-3 font-semibold tracking-wide pointer-events-none">LOGIN</Button
+			<Button disabled color="purple" class="mr-3 font-semibold tracking-wide pointer-events-none"
+				>LOGIN</Button
 			>
 		{/if}
 	{/if}
@@ -417,10 +474,13 @@
 <main>
 	<div class={mainDivClass}>
 		{#if $newRequest}
-			<Alert class="bg-blue-100 text-blue-900 flex justify-between items-center content-center mx-4 mt-4">
+			<Alert
+				class="bg-blue-100 text-blue-900 flex justify-between items-center content-center mx-4 mt-4"
+			>
 				<BellRingSolid tabindex="-1" class="text-blue-700" />
 				<div>
-					<span class="font-bold text-blue-700">(NEW)</span> Help request received! Total of <span class="font-bold">{requestsData.length}</span> help requests.
+					<span class="font-bold text-blue-700">(NEW)</span> Help request received! Total of
+					<span class="font-bold">{requestsData.length}</span> help requests.
 				</div>
 				<CloseSolid
 					tabindex="-1"
@@ -429,7 +489,9 @@
 				/>
 			</Alert>
 		{:else if newLowMoodData}
-			<Alert class="bg-red-200 flex justify-between items-center content-center text-red-900 mx-4 mt-4">
+			<Alert
+				class="bg-red-200 flex justify-between items-center content-center text-red-900 mx-4 mt-4"
+			>
 				<BellRingSolid tabindex="-1" class="text-red-700" />
 				{#if activeUrl == '/dashboard'}
 					<div class="text-center">
@@ -441,7 +503,10 @@
 					</div>
 				{:else}
 					<div class="text-center">
-						Changes has been made to the consistent low moods table, please navigate to <a href="/dashboard" class="font-semibold hover:underline hover:text-blue-700">dashboard</a>.
+						Changes has been made to the consistent low moods table, please navigate to <a
+							href="/dashboard"
+							class="font-semibold hover:underline hover:text-blue-700">dashboard</a
+						>.
 					</div>
 				{/if}
 				<CloseSolid
