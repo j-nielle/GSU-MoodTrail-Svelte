@@ -1,8 +1,8 @@
 // @ts-nocheck
-import { fail,redirect } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 
 /** @type {import('./$types').PageServerLoad} */
-export async function load({ url, locals: { supabase, getSession } }) {
+export async function load({ locals: { supabase, getSession } }) {
 	const session = await getSession();
 	if (!session) {
 		throw redirect(303, '/login');
@@ -11,7 +11,7 @@ export async function load({ url, locals: { supabase, getSession } }) {
 	const { data: students } = await supabase
 		.from('Student')
 		.select()
-		.order('name', { ascending: true });
+		.order('student_name', { ascending: true });
 
 	const { data: courses } = await supabase
 		.from('Course')
@@ -41,26 +41,26 @@ export const actions = {
 
 		let errors = [];
 
-		if(newMName === null || newMName === undefined || newMName === '') {
+		if (newMName === null || newMName === undefined || newMName === '') {
 			newName = `${newFName} ${newLName}`.trim().toUpperCase();
 		}
-		else if(newMName.startsWith('.')) {
+		else if (newMName.startsWith('.')) {
 			errors.push({
 				errorInput: 'InvalidMiddleInitial',
 				error: 'Invalid middle initial, please exit and try again.'
 			});
 		}
-		else{
+		else {
 			newName = `${newFName} ${newMName}. ${newLName}`.trim().toUpperCase();
 		}
-		
-		if((/[^0-9]/.test(newID))){
+
+		if ((/[^0-9]/.test(newID))) {
 			errors.push({
 				errorInput: 'NonNumericID',
 				error: 'Valid ID number (e.g 2020303123), please exit and try again.'
 			});
 		}
-		else if(newID?.slice(0, 3) != '202'){
+		else if (newID?.slice(0, 3) != '202') {
 			errors.push({
 				errorInput: 'InvalidIDNum',
 				error: 'Valid ID number (e.g 2020303123), please exit and try again.'
@@ -76,7 +76,7 @@ export const actions = {
 			try {
 				const { data: { user }, error } = await supabase.auth.getUser();
 				const currentUserId = user?.id;
-				
+
 				const { data: existingStudent, error: searchStudentError } = await supabase
 					.from('Student')
 					.select('*')
@@ -84,16 +84,16 @@ export const actions = {
 					.eq('name', newName)
 					.eq('year_level_id', newYearLevel)
 					.eq('course_id', newCourse);
-				
-				if(searchStudentError) throw searchStudentError;
-				if(error) throw error;
+
+				if (searchStudentError) throw searchStudentError;
+				if (error) throw error;
 				if (existingStudent.length > 0) {
 					errors.push({
 						errorInput: 'existingStudent',
 						error: 'Student already exists, please exit and try again.'
 					});
-				} 
-				else{
+				}
+				else {
 					const { error: insertStudentError } = await supabase
 						.from('Student')
 						.insert([
@@ -106,7 +106,7 @@ export const actions = {
 							}
 						])
 						.select();
-	
+
 					if (insertStudentError) {
 						if (insertStudentError.message == 'duplicate key value violates unique constraint "student_id_key"') {
 							errors.push({
@@ -114,9 +114,8 @@ export const actions = {
 								error: 'Student ID already exists, please exit and try again.'
 							});
 						}
-						else if(insertStudentError.message == 'duplicate key value violates unique constraint "Student_name_key"' 
-							|| insertStudentError.message == 'duplicate key value violates unique constraint "name_unique"') 
-						{
+						else if (insertStudentError.message == 'duplicate key value violates unique constraint "Student_name_key"'
+							|| insertStudentError.message == 'duplicate key value violates unique constraint "name_unique"') {
 							errors.push({
 								errorInput: 'duplicateName',
 								error: 'Student name already exists, please exit and try again.'
@@ -126,7 +125,7 @@ export const actions = {
 					}
 				}
 			} catch (error) {
-				console.error("ERROR:",error.message)
+				console.error("ERROR:", error.message)
 				errors.push({
 					errorInput: 'error',
 					error: error.message
@@ -148,7 +147,7 @@ export const actions = {
 
 	editStudent: async ({ request, locals: { supabase } }) => {
 		const formData = await request.formData();
-		
+
 		const studentRow = formData.get('studentRow');
 		const editID = formData.get('editID');
 		const editFName = formData.get('editFName');
@@ -160,8 +159,8 @@ export const actions = {
 		let errors = [];
 
 		let editName = '';
-		
-		if(/[0-9]/.test(editMName)){
+
+		if (/[0-9]/.test(editMName)) {
 			errors.push({
 				errorInput: 'NumericMiddleInitial',
 				error: 'Invalid middle initial, please try again.'
@@ -176,20 +175,20 @@ export const actions = {
 			editMName = '';
 		}
 
-		if(editMName === null || editMName === undefined || editMName === '') {
+		if (editMName === null || editMName === undefined || editMName === '') {
 			editName = `${editFName} ${editLName}`.trim().toUpperCase();
 		}
-		else{
+		else {
 			editName = `${editFName} ${editMName}. ${editLName}`.trim().toUpperCase();
 		}
 
-		if(/[^0-9]/.test(editID)){
+		if (/[^0-9]/.test(editID)) {
 			errors.push({
 				errorInput: 'NonNumericID',
 				error: 'Valid ID number (e.g 2020303123), please exit and try again.'
 			});
 		}
-		else if(editID?.slice(0, 3) != '202'){
+		else if (editID?.slice(0, 3) != '202') {
 			errors.push({
 				errorInput: 'InvalidIDNum',
 				error: 'Valid ID number (e.g 2020303123), please exit and try again.'
@@ -213,16 +212,16 @@ export const actions = {
 					.eq('name', editName)
 					.eq('year_level_id', editYearLevel)
 					.eq('course_id', editCourse);
-				
-				if(searchStudentError) throw searchStudentError;
-				if(error) throw error;
+
+				if (searchStudentError) throw searchStudentError;
+				if (error) throw error;
 				if (prevStudentData?.length > 0) {
 					errors.push({
 						errorInput: 'prevStudentData',
 						error: 'No changes made. Please exit and try again.'
 					});
 				}
-				else{
+				else {
 					const { error: updateStudentError } = await supabase
 						.from('Student')
 						.update({
@@ -237,7 +236,7 @@ export const actions = {
 					if (updateStudentError) throw updateStudentError;
 				}
 			} catch (error) {
-				console.error("ERROR:",error.message);
+				console.error("ERROR:", error.message);
 				errors.push({
 					errorInput: 'error',
 					error: error.message
@@ -258,21 +257,26 @@ export const actions = {
 		}
 	},
 
-	removeStudent: async ({ request, locals: { supabase }  }) => {
+	removeStudent: async ({ request, locals: { supabase } }) => {
 		const formData = await request.formData();
 		const studentID = formData?.get('studentID');
 
 		try {
 			const { error: deleteStudentError } = await supabase.from('Student').delete().eq('student_id', studentID);
 
-			if (deleteStudentError) throw deleteStudentError;
-			
+			if (deleteStudentError) {
+				return fail(400, {
+					error: deleteStudentError.message,
+					success: false
+				});
+			};
+
 			return {
 				success: true,
 				error: false
 			};
 		} catch (error) {
-			console.error("ERROR:",error.message)
+			console.error("ERROR:", error.message)
 			return fail(400, {
 				error: error.message,
 				success: false
