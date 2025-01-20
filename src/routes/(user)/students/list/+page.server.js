@@ -1,5 +1,7 @@
 // @ts-nocheck
 import { fail, redirect } from '@sveltejs/kit';
+import { createError } from '$lib/helpers/server';
+import { constructName } from '$lib/helpers/name';
 
 /** @type {import('./$types').PageServerLoad} */
 export async function load({ locals: { supabase, getSession } }) {
@@ -17,7 +19,6 @@ export async function load({ locals: { supabase, getSession } }) {
 		.from('Course')
 		.select()
 		.order('course', { ascending: true });
-	console.log('courses', courses)
 
 	return {
 		students: students || [],
@@ -107,7 +108,6 @@ export const actions = {
 							}
 						])
 						.select();
-						console.log(insertStudentError)
 					if (insertStudentError) {
 						if (insertStudentError.message == 'duplicate key value violates unique constraint "student_id_key"') {
 							errors.push({
@@ -148,7 +148,6 @@ export const actions = {
 
 	editStudent: async ({ request, locals: { supabase } }) => {
 		const formData = await request.formData();
-
 		const studentRow = formData.get('studentRow');
 		const editID = formData.get('editID');
 		const editFName = formData.get('editFName');
@@ -161,45 +160,28 @@ export const actions = {
 
 		let editName = '';
 
+		editName = constructName(editFName, editMName, editLName);
+
+		const reqBody = {
+			student_id: editID,
+			student_name: editName,
+			year_level_id: editYearLevel,
+			course_id: editCourse,
+		};
+
 		if (/[0-9]/.test(editMName)) {
-			errors.push({
-				errorInput: 'NumericMiddleInitial',
-				error: 'Invalid middle initial, please try again.'
-			});
+			errors.push(createError('NumericMiddleInitial', 'Invalid middle initial, please try again.', reqBody));
 			editMName = '';
-		}
-		else if (editMName.startsWith('.')) {
-			errors.push({
-				errorInput: 'InvalidMiddleInitial',
-				error: 'Invalid middle initial, please try again.'
-			});
+		} else if (editMName?.startsWith('.')) {
+			errors.push(createError('InvalidMiddleInitial', 'Invalid middle initial, please try again.', reqBody));
 			editMName = '';
 		}
 
-		if (editMName === null || editMName === undefined || editMName === '') {
-			editName = `${editFName} ${editLName}`.trim().toUpperCase();
-		}
-		else {
-			editName = `${editFName} ${editMName}. ${editLName}`.trim().toUpperCase();
-		}
-
-		if (/[^0-9]/.test(editID)) {
-			errors.push({
-				errorInput: 'NonNumericID',
-				error: 'Valid ID number (e.g 2020303123), please exit and try again.'
-			});
-		}
-		else if (editID?.slice(0, 3) != '202') {
-			errors.push({
-				errorInput: 'InvalidIDNum',
-				error: 'Valid ID number (e.g 2020303123), please exit and try again.'
-			});
+		if (/[^0-9]/.test(editID) || editID?.slice(0, 3) != '202') {
+			errors.push(createError('InvalidIDNum', 'Valid ID number (e.g 2020303123), please exit and try again.', reqBody));
 		}
 		else if (editName?.length < 5 || /\d/.test(editName)) {
-			errors.push({
-				errorInput: 'InvalidName',
-				error: 'Entered invalid name, please exit and try again.'
-			});
+			errors.push(createError('InvalidName', 'Entered invalid name, please exit and try again.', reqBody));
 		}
 		else {
 			try {
@@ -217,10 +199,7 @@ export const actions = {
 				if (searchStudentError) throw searchStudentError;
 				if (error) throw error;
 				if (prevStudentData?.length > 0) {
-					errors.push({
-						errorInput: 'prevStudentData',
-						error: 'No changes made. Please exit and try again.'
-					});
+					errors.push(createError('prevStudentData', 'No changes made. Please exit and try again.', reqBody));
 				}
 				else {
 					const { error: updateStudentError } = await supabase
@@ -232,16 +211,13 @@ export const actions = {
 							course_id: editCourse,
 							edited_by: currentUserId
 						})
-						.eq('id', studentRow)
+						.eq('student_id', studentRow)
 						.select();
 					if (updateStudentError) throw updateStudentError;
 				}
 			} catch (error) {
 				console.error("ERROR:", error.message);
-				errors.push({
-					errorInput: 'error',
-					error: error.message
-				});
+				errors.push(createError('error', error.message, reqBody));
 			}
 		}
 

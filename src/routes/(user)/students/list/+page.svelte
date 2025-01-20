@@ -46,7 +46,7 @@
 	let limit = 5;
 	let maxPage, startIndex, endIndex, paginatedItems;
 
-	let studentToEdit;
+	let editStudent;
 
 	let alertState = {
 		type: 'INSERT',
@@ -149,7 +149,7 @@
 
 	const handleUpdate = (student_id) => {
 		modalState.edit = true;
-		studentToEdit = students.filter((student) => student.student_id == student_id);
+		editStudent = students.find((student) => student.student_id == student_id);
 	};
 
 	onMount(() => {
@@ -302,7 +302,7 @@
 	bind:open={modalState.edit}
 	bind:handler={form}
 	bind:items={courseSelect}
-	student={studentToEdit}
+	student={editStudent}
 />
 
 <Modal title="Confirm Delete?" bind:open={modalState.delete} size="xs" class="max-w-xs">

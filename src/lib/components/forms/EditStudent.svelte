@@ -4,37 +4,53 @@
 	import { Button, Select, Modal, FloatingLabelInput } from 'flowbite-svelte';
 	import { yearLvl, yrlvlChoices } from '$lib/constants/index.js';
 	import { InputHelper } from '$lib/components/elements/index.js';
+	import { onMount, tick } from 'svelte';
+	import { extractNames } from '$lib/helpers/name';
 
 	export let open;
 	export let handler;
 	export let items;
 	export let student;
 
-	let rowNum, prevID, prevFName, prevMName, prevLName, prevYrLvl, prevCourse;
+	let rowNum;
 
-	$: if (student) {
-		rowNum = student[0]?.id;
-		const fullName = student[0]?.student_name.split(' ');
+	let prevID, prevFName, prevMName, prevLName, prevYrLvl, prevCourse;
 
-		// find the index of the middle name, the part that has a length of 2 and has a period
-		const prevMIndex = fullName.findIndex((part) => part.length === 2 && part.includes('.'));
+	// TODO: improve err handling
 
-		prevID = student[0]?.student_id;
-		
-		// check if a middle name was found
-		if (prevMIndex !== -1) {
-			prevFName = fullName.slice(0, prevMIndex).join(' ');
-			prevMName = fullName[prevMIndex].slice(0, -1);
-			prevLName = fullName.slice(prevMIndex + 1).join(' ');
-		} else { // if not
-			prevFName = fullName.slice(0, -1).join(' ');
-			prevMName = '';
-			prevLName = fullName[fullName.length - 1];
-		}
-		prevYrLvl = student[0]?.year_level_id;
-		prevCourse = student[0]?.course_id;
+	$: if (!open && handler) {
+		student = undefined;
+		handler.errors = [];
 	}
 
+	$: if (handler && handler.errors.length > 0) {
+		handleResetForm();
+	}
+
+	$: {
+		if (student) {
+			setStudent();
+		}
+	}
+
+	const setStudent = () => {
+		const { firstName, middleName, lastName } = extractNames(student.student_name || '');
+
+		prevID = student.student_id;
+		prevFName = firstName;
+		prevMName = middleName;
+		prevLName = lastName;
+		prevYrLvl = student.year_level_id;
+		prevCourse = student.course_id;
+	};
+
+	const handleResetForm = () => {
+		const body = handler.errors[0].body;
+		student.student_id = body.student_id;
+		student.student_name = body.student_name;
+		student.year_level_id = body.year_level_id;
+		student.course_id = body.course_id;
+	};
 </script>
 
 <Modal title="Edit Student Data" bind:open size="xs" class="max-w-xl">
@@ -42,7 +58,6 @@
 		{#if handler?.errors?.length > 0}
 			{#each handler?.errors as error}
 				<InputHelper color="red" msg={error.error} />
-				<p class="hidden">{ setTimeout(() => { error.error = ''; }, 2500) }</p>
 			{/each}
 		{/if}
 
@@ -60,14 +75,14 @@
 				required
 			/>
 		</div>
-
+		<!-- prevFName supposed to update if there's an update in student but no change  -->
 		<div class="my-2">
 			<FloatingLabelInput
 				size="small"
 				style="outlined"
 				name="editFName"
 				type="text"
-				value={prevFName}
+				value={prevFName || name.first}
 				label="First Name"
 				minlength="3"
 				required
@@ -81,7 +96,7 @@
 					style="outlined"
 					name="editMName"
 					type="text"
-					value={prevMName}
+					value={prevMName || name.middle}
 					label="Middle Initial"
 					maxlength="1"
 				/>
@@ -92,7 +107,7 @@
 					style="outlined"
 					name="editLName"
 					type="text"
-					value={prevLName}
+					value={prevLName || name.last}
 					label="Last Name"
 					minlength="2"
 					required
@@ -114,10 +129,16 @@
 			<p class="text-sm">
 				Previous Year Level: <span class="font-semibold text-orange-500">{yearLvl[prevYrLvl]}</span>
 			</p>
-	
-			<Select size="sm" items={yrlvlChoices} class="w-fit" 
-				placeholder="Select New Role" 
-				value={String(prevYrLvl)} name="editYrLvl" required />
+
+			<Select
+				size="sm"
+				items={yrlvlChoices}
+				class="w-fit"
+				placeholder="Select New Role"
+				value={String(prevYrLvl)}
+				name="editYrLvl"
+				required
+			/>
 		</div>
 
 		<Button type="submit" class="w-full mt-3">Update Student</Button>
