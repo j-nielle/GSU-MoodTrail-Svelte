@@ -176,7 +176,7 @@
 		if (hasEntry) {
 			urlResult = {};
 			result = studentMoodData?.filter((student) => student?.student_id == searchTerm);
-			//console.log(result)
+			console.log(result)
 			currentStudentID = result[0]?.student_id;
 		} else if (!hasEntry){
 			result = {};
@@ -656,7 +656,7 @@
 								<Avatar size="lg" src="" border rounded />
 							</div>
 							<div class="flex flex-col">
-								<h5 class="text-xl font-medium text-zinc-800 max-w-sm">{urlResult[0]?.name}</h5>
+								<h5 class="text-xl font-medium text-zinc-800 max-w-sm">{urlResult[0]?.student_name}</h5>
 								<span class="text-sm text-gray-500 dark:text-gray-400">{urlResult[0]?.student_id}</span>
 								<div class="flex mt-5 space-x-10">
 									<div class="flex flex-col">
@@ -679,7 +679,7 @@
 								<Avatar size="lg" src="" border rounded />
 							</div>
 							<div class="flex flex-col">
-								<h5 class="text-xl font-medium text-zinc-800 max-w-sm">{result[0]?.name}</h5>
+								<h5 class="text-xl font-medium text-zinc-800 max-w-sm">{result[0]?.student_name}</h5>
 								<span class="text-sm text-gray-500 dark:text-gray-400">{result[0].student_id}</span>
 								<div class="flex mt-5">
 									<div class="flex flex-col">
