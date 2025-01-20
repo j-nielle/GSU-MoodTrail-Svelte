@@ -245,8 +245,10 @@
 				<TableHeadCell>Full Name</TableHeadCell>
 				<TableHeadCell>Year Level</TableHeadCell>
 				<TableHeadCell>Course</TableHeadCell>
-				<TableHeadCell>Edit</TableHeadCell>
-				<TableHeadCell>Remove</TableHeadCell>
+				{#if paginatedItems.length}
+					<TableHeadCell>Edit</TableHeadCell>
+					<TableHeadCell>Remove</TableHeadCell>
+				{/if}
 			</TableHead>
 			<TableBody tableBodyClass="divide-y border border-zinc-300 max-h-40 overflow-y-auto">
 				{#if paginatedItems === undefined || paginatedItems?.length === 0}
