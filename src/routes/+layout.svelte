@@ -281,6 +281,7 @@
 		});
 
 		const reqChann = supabase
+			.channel('reqChann')
 			.on(
 				'postgres_changes',
 				{
