@@ -1,4 +1,4 @@
-import { fail,redirect } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 
 /** @type {import('./$types').PageServerLoad} */
 export async function load({ locals: { supabase, getSession } }) {
@@ -15,12 +15,30 @@ export async function load({ locals: { supabase, getSession } }) {
 	const { data: students } = await supabase
 		.from('Student')
 		.select()
-		.order('name', { ascending: true });
+		.order('student_name', { ascending: true });
+
+	const { data: courses } = await supabase
+		.from('Course')
+		.select()
+		.order('id', { ascending: true });
+
+	const { data: colleges } = await supabase
+		.from('College')
+		.select()
+		.order('id', { ascending: true });
+
+	const { data: year_levels } = await supabase
+		.from('YearLevel')
+		.select()
+		.order('id', { ascending: true });
 
 	return {
-		studentMood: studentMood || [],
-		students: students || [],
-		session: session
+		studentMood,
+		students,
+		courses,
+		colleges,
+		year_levels,
+		session
 	};
 }
 
@@ -32,7 +50,7 @@ export const actions = {
 		const studentID = formData?.get('studentID');
 		const addMood = formData?.get('addMood');
 		const addReason = formData?.get('addReason');
-		
+
 		/**
 		 *  user:{
 					id: 'd5a331c2-811e-4dbf-9557-eae2394bdc17',
@@ -49,8 +67,8 @@ export const actions = {
 			const { error: insertMoodEntryError } = await supabase
 				.from('StudentMood')
 				.insert([
-					{ 
-						student_id: studentID, mood_id: addMood, reason_id: addReason, 
+					{
+						student_id: studentID, mood_id: addMood, reason_id: addReason,
 						created_by: currentUserId
 					},
 				])
@@ -60,14 +78,14 @@ export const actions = {
 				// console.log(insertMoodEntryError)
 				throw insertMoodEntryError;
 			}
-			if(error) throw error;
-			
-			return{
+			if (error) throw error;
+
+			return {
 				success: true,
 				error: false
 			}
 		} catch (error) {
-			console.error("ERROR:",error.message)
+			console.error("ERROR:", error.message)
 			return fail(400, {
 				error: error.message,
 				success: false

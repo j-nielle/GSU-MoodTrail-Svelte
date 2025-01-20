@@ -29,7 +29,7 @@ export async function load({ parent }) {
 		.order('created_at', { ascending: false });
 
 	const { data: { user } } = await supabase.auth.getUser();
-	
+
 	return {
 		studentMood: studentMood || [],
 		anonMood: anonMood || [],
