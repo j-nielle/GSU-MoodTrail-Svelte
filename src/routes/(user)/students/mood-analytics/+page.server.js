@@ -44,24 +44,15 @@ export async function load({ locals: { supabase, getSession } }) {
 
 /** @type {import('./$types').Actions} */
 export const actions = {
-	addMoodEntry: async ({ request, locals: { supabase } }) => {
+	addMoodEntry: async ({ request, locals: { supabase, getSession } }) => {
 		const formData = await request.formData();
 
 		const studentID = formData?.get('studentID');
 		const addMood = formData?.get('addMood');
 		const addReason = formData?.get('addReason');
 
-		/**
-		 *  user:{
-					id: 'd5a331c2-811e-4dbf-9557-eae2394bdc17',
-					role: 'admin',
-					email: 'admin@test.com',
-					user_metadata: { role: 'admin', username: 'admin test' }
-				}
-		 */
-
 		try {
-			const { data: { user }, error } = await supabase.auth.getUser();
+			const { user } = await getSession();
 			const currentUserId = user?.id;
 
 			const { error: insertMoodEntryError } = await supabase
@@ -75,11 +66,8 @@ export const actions = {
 				.select()
 
 			if(insertMoodEntryError) {
-				// console.log(insertMoodEntryError)
 				throw insertMoodEntryError;
 			}
-			if (error) throw error;
-
 			return {
 				success: true,
 				error: false
