@@ -840,7 +840,7 @@
 						</div>
 					</Card>
 				{:else}
-					<P>Student not found.</P>
+					<P>No student found.</P>
 				{/if}
 			</div>
 
