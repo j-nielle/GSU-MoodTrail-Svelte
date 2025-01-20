@@ -14,7 +14,7 @@
 
 	$: if (student) {
 		rowNum = student[0]?.id;
-		const fullName = student[0]?.name.split(' ');
+		const fullName = student[0]?.student_name.split(' ');
 
 		// find the index of the middle name, the part that has a length of 2 and has a period
 		const prevMIndex = fullName.findIndex((part) => part.length === 2 && part.includes('.'));

@@ -1,4 +1,5 @@
-<script lang="ts">
+<script>
+	// @ts-nocheck
 	import _ from 'lodash';
 	import { onMount } from 'svelte';
 	import { enhance } from '$app/forms';
@@ -24,23 +25,20 @@
 		EditOutline,
 		TrashBinSolid
 	} from 'flowbite-svelte-icons';
-	import { invalidate, invalidateAll } from '$app/navigation';
+	import { timeout } from '$lib/helpers/alert.ts';
 
 	export let data;
 	export let form;
 
 	$: ({ supabase } = data);
 
-	let students = data.students;
-	let courses = data.courses;
+	$: students = data.students;
+	$: courses = data.courses;
 
-	let eventType = '';
-
-	let successAlerts = {
-		add: false,
-		edit: false,
-		delete: false
-	};
+	$: courseSelect = courses?.map((item) => ({
+		value: item.id,
+		name: item.course
+	}));
 
 	let searchTerm = '';
 	let filteredItems;
@@ -48,109 +46,66 @@
 	let limit = 5;
 	let maxPage, startIndex, endIndex, paginatedItems;
 
-	let selectCourse = courses?.map((item) => ({
-		value: item.course_id,
-		name: item.course
-	}));
+	let studentToEdit;
 
-	let rowToUpdate;
+	let alertState = {
+		type: 'INSERT',
+		color: 'green',
+		text: '',
+		state: false
+	};
 
-	let addStudentModal = false;
-	let editStudentModal = false;
-	let removeStudentModal = false;
+	let modalState = {
+		add: false,
+		edit: false,
+		delete: false
+	};
 
-	let addAlert = false,
-		updateAlert = false,
-		deleteAlert = false;
+	let alertCounter = 2;
 
 	let studentToDelete;
 
-	$: {
-		console.log(data);
+	$: if (students || searchTerm) {
+		handleFilterStudents();
 	}
 
-	onMount(() => {
-		const studentsDataChannel = supabase
-			.channel('studentsDataChannel')
-			.on(
-				'postgres_changes',
-				{
-					event: '*',
-					schema: 'public',
-					table: 'Student'
-				},
-				(payload) => {
-					handleEvent(payload.eventType, payload);
-				}
-			)
-			.subscribe();
-
-		return () => {
-			studentsDataChannel.unsubscribe();
-		};
-	});
-
-	const handleEvent = (eventType: string, payload) => {
+	const handleEvent = (eventType, payload) => {
 		switch (eventType) {
 			case 'INSERT':
-				addAlert = true;
+				modalState.add = false;
+				alertState = {
+					type: 'INSERT',
+					color: 'green',
+					text: `Student ${payload.new.student_id} has been added`,
+					state: true
+				};
 
-				setTimeout(() => {
-					addAlert = false;
-				}, 1500);
-				students = _.cloneDeep([payload.new, ...students]).sort((currentElem, nextElem) =>
-					currentElem.student_name.localeCompare(nextElem.student_name)
-				);
 				break;
 			case 'UPDATE':
-				updateAlert = true;
-
-				setTimeout(() => {
-					updateAlert = false;
-				}, 1500);
-				const updatedIndex = students.findIndex((student) => student.id === payload.old.id);
-
-				if (updatedIndex !== -1) {
-					students[updatedIndex] = payload.new;
-				}
-
-				students = _.cloneDeep(students).sort((currentElem, nextElem) =>
-					currentElem.student_name.localeCompare(nextElem.student_name)
-				);
+				modalState.edit = false;
+				alertState = {
+					type: eventType,
+					color: 'purple',
+					text: `Student ${payload.old.student_id} has been updated`,
+					state: true
+				};
 				break;
 			case 'DELETE':
-				console.log('DELETE', payload, students);
-
-				deleteAlert = true;
-
-				setTimeout(() => {
-					deleteAlert = false;
-				}, 1500);
-
-				/**
-				 * {
-    "schema": "public",
-    "table": "Student",
-    "commit_timestamp": "2025-01-20T11:05:25.052Z",
-    "eventType": "DELETE",
-    "new": {},
-    "old": {
-        "student_id": 2020301353
-    },
-    "errors": null
-}
-				*/
-				eventType = 'asfaf'
-				students = students.filter(({ id }) => id !== payload.old.student_id);
+				modalState.delete = false;
+				alertState = {
+					type: eventType,
+					color: 'red',
+					text: `Student ${payload.old.student_id} has been deleted`,
+					state: true
+				};
 				break;
 			default:
 				break;
 		}
+		timeout(alertCounter, () => {
+			alertState.state = false;
+		});
 	};
-
-	$: {
-		console.log(eventType)
-	}
 
 	const handleFilterStudents = () => {
 		filteredItems = students?.filter((req) => {
@@ -181,36 +136,42 @@
 		paginatedItems = filteredItems?.slice(startIndex, endIndex);
 	};
 
-	$: {
-		console.log(filteredItems);
-	}
-
-	$: if (students) {
-		console.log('students');
-		handleFilterStudents();
-	}
-
-	$: {
-		if (deleteAlert) removeStudentModal = false;
-		else if (addAlert) addStudentModal = false;
-		else if (updateAlert) editStudentModal = false;
-	}
-
-	function changePage(newPage) {
+	const changePage = (newPage) => {
 		if (newPage >= 1 && newPage <= maxPage) {
 			currentPage = newPage;
 		}
-	}
+	};
 
-	async function handleRemove(student_id) {
-		removeStudentModal = true;
+	const handleRemove = async (student_id) => {
+		modalState.delete = true;
 		studentToDelete = student_id;
-	}
+	};
 
-	function handleUpdate(student_id) {
-		editStudentModal = true;
-		rowToUpdate = students.filter((student) => student.student_id == student_id);
-	}
+	const handleUpdate = (student_id) => {
+		modalState.edit = true;
+		studentToEdit = students.filter((student) => student.student_id == student_id);
+	};
+
+	onMount(() => {
+		const studentsData = supabase
+			.channel('studentsData')
+			.on(
+				'postgres_changes',
+				{
+					event: '*',
+					schema: 'public',
+					table: 'Student'
+				},
+				(payload) => {
+					handleEvent(payload.eventType, payload);
+				}
+			)
+			.subscribe();
+
+		return () => {
+			studentsData.unsubscribe();
+		};
+	});
 </script>
 
 <svelte:head>
@@ -218,17 +179,9 @@
 </svelte:head>
 
 <div class="bg-white space-y-3 mt-5">
-	{#if deleteAlert}
-		<Alert color="red" class="mx-8 mb-4">
-			<span class="font-medium">Student has been removed!</span>
-		</Alert>
-	{:else if addAlert}
-		<Alert color="green" class="mx-8 mb-4">
-			<span class="font-medium">New Student added!</span>
-		</Alert>
-	{:else if updateAlert}
-		<Alert color="purple" class="mx-8 mb-4">
-			<span class="font-medium">Student data updated!</span>
+	{#if alertState.state}
+		<Alert color={alertState.color} class="mx-8 mb-4">
+			<span class="font-medium">{alertState.text}</span>
 		</Alert>
 	{/if}
 	<div class="flex justify-between">
@@ -247,7 +200,7 @@
 			size="sm"
 			color="green"
 			on:click={() => {
-				addStudentModal = true;
+				modalState.add = true;
 			}}
 		>
 			Add New Student
@@ -309,7 +262,7 @@
 							<TableBodyCell>
 								<a
 									class="hover:underline"
-									href="/students/student-mood-information?search={student.student_id}"
+									href="/students/mood-analytics?search={student.student_id}"
 									rel="noopener noreferrer"
 								>
 									{student.student_id}
@@ -342,15 +295,15 @@
 	</div>
 </div>
 
-<AddStudent bind:open={addStudentModal} bind:handler={form} bind:items={selectCourse} />
+<AddStudent bind:open={modalState.add} bind:handler={form} bind:items={courseSelect} />
 <EditStudent
-	bind:open={editStudentModal}
+	bind:open={modalState.edit}
 	bind:handler={form}
-	bind:items={selectCourse}
-	student={rowToUpdate}
+	bind:items={courseSelect}
+	student={studentToEdit}
 />
 
-<Modal title="Confirm Delete?" bind:open={removeStudentModal} size="xs" class="max-w-xs">
+<Modal title="Confirm Delete?" bind:open={modalState.delete} size="xs" class="max-w-xs">
 	<form class="flex flex-col" method="POST" action="?/removeStudent" use:enhance>
 		<input type="hidden" id="studentID" name="studentID" bind:value={studentToDelete} />
 
@@ -358,7 +311,7 @@
 			type="submit"
 			color="red"
 			class="w-full mt-3"
-			on:click={() => (removeStudentModal = false)}>CONFIRM DELETE</Button
+			on:click={() => (modalState.delete = false)}>CONFIRM DELETE</Button
 		>
 	</form>
 </Modal>

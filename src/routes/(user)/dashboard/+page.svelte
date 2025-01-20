@@ -1438,7 +1438,7 @@
 							{#each student.streaks as streak}
 								<TableBodyRow class="text-center">
 									<TableBodyCell class="underline">
-										<a class="hover:underline" href="/students/student-mood-information?search={student.studentId}"
+										<a class="hover:underline" href="/students/mood-analytics?search={student.studentId}"
 											rel="noopener noreferrer">
 											{student.studentId}
 										</a>

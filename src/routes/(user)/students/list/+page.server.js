@@ -17,6 +17,7 @@ export async function load({ locals: { supabase, getSession } }) {
 		.from('Course')
 		.select()
 		.order('course', { ascending: true });
+	console.log('courses', courses)
 
 	return {
 		students: students || [],
@@ -81,7 +82,7 @@ export const actions = {
 					.from('Student')
 					.select('*')
 					.eq('student_id', newID)
-					.eq('name', newName)
+					.eq('student_name', newName)
 					.eq('year_level_id', newYearLevel)
 					.eq('course_id', newCourse);
 
@@ -99,14 +100,14 @@ export const actions = {
 						.insert([
 							{
 								student_id: newID,
-								name: newName,
+								student_name: newName,
 								year_level_id: newYearLevel,
 								course_id: newCourse,
-								created_by: currentUserId
+								edited_by: currentUserId
 							}
 						])
 						.select();
-
+						console.log(insertStudentError)
 					if (insertStudentError) {
 						if (insertStudentError.message == 'duplicate key value violates unique constraint "student_id_key"') {
 							errors.push({
@@ -209,7 +210,7 @@ export const actions = {
 					.from('Student')
 					.select('*')
 					.eq('student_id', editID)
-					.eq('name', editName)
+					.eq('student_name', editName)
 					.eq('year_level_id', editYearLevel)
 					.eq('course_id', editCourse);
 
@@ -226,7 +227,7 @@ export const actions = {
 						.from('Student')
 						.update({
 							student_id: editID,
-							name: editName,
+							student_name: editName,
 							year_level_id: editYearLevel,
 							course_id: editCourse,
 							edited_by: currentUserId

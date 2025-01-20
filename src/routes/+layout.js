@@ -23,6 +23,7 @@ export async function load({ fetch, data, depends }) {
 			.from('Request')
 			.select('*')
 			.order('created_at', { ascending: false });
+
 		
 		const { data: pendingRequests, error: pendingReqDataErr } = await supabase
 			.from('Request')
