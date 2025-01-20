@@ -98,6 +98,8 @@
 
 	let loggedBy = '';
 
+	$: selected = selectedCollege && selectedCourse && selectedYearLevel && selectedStudent
+
 	onMount(() => {
 		const studentChartChannel = supabase
 			.channel('studentChartChannel')
@@ -200,14 +202,14 @@
 	$: if (students?.length > 0) {
 		college = [...colleges].map(({ id, college }) => ({
 			value: id,
-			name: college
+			name: id
 		}));
 
 		course = [...courses]
 			.filter((course) => course.college_id === selectedCollege)
 			.map((course) => ({
 				value: course.id,
-				name: course.course
+				name: course.id
 			}));
 
 		yearLevel = [...year_levels].map(({ id, year_level }) => ({
@@ -219,7 +221,7 @@
 			.filter((student) => student.course_id === selectedCourse && yearLvl[student.year_level_id])
 			.map(({ student_id, student_name }) => ({
 				value: student_id,
-				name: student_name
+				name: student_id
 			}));
 
 		// course = _.chain(studentMoodData)
@@ -613,7 +615,7 @@
 					Add Mood Entry
 				</Button>
 			</div>
-		{:else if students?.length > 0}
+		{:else if students.length}
 			<Select
 				placeholder="College"
 				class="font-normal w-max h-11 bg-white"
