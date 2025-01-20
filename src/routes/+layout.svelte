@@ -427,7 +427,7 @@
 				</NavLi>
 				<Dropdown triggeredBy="#student-menu" dropdownClass="w-36 items-center relative z-20">
 					<DropdownItem href="/students/list">List of Students</DropdownItem>
-					<DropdownItem href="/students/mood-analytics">Student Mood Analytics</DropdownItem>
+					<DropdownItem href="/students/mood-analytics">Mood Analytics</DropdownItem>
 				</Dropdown>
 			</NavUl>
 		</div>
