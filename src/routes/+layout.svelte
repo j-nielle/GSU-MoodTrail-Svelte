@@ -427,9 +427,7 @@
 				</NavLi>
 				<Dropdown triggeredBy="#student-menu" dropdownClass="w-36 items-center relative z-20">
 					<DropdownItem href="/students/list">List of Students</DropdownItem>
-					<DropdownItem href="/students/mood-analytics"
-						>Student Mood Analytics</DropdownItem
-					>
+					<DropdownItem href="/students/mood-analytics">Student Mood Analytics</DropdownItem>
 				</Dropdown>
 			</NavUl>
 		</div>
@@ -440,17 +438,16 @@
 			</label>
 			<Dropdown placement="left" triggeredBy="#avatar-menu" containerClass="mt-4">
 				<DropdownHeader>
-					<span class="block text-sm uppercase">{currentUser.username}</span>
+					{#if currentUser.username}
+						<span class="block text-sm uppercase">{currentUser.username}</span>
+					{/if}
 					<span class="block truncate text-sm font-medium">{currentUser.email}</span>
 				</DropdownHeader>
 				<DropdownItem href="/settings/account">Account</DropdownItem>
-				<!-- <DropdownItem href="/settings/itsupport">Ask IT Support</DropdownItem> -->
-				{#if currentUser.role.toLowerCase() == 'admin'}
+				{#if currentUser.role && currentUser.role.toLowerCase() == 'admin'}
 					<DropdownItem href="/settings/manage-users">Manage Users</DropdownItem>
 				{/if}
 				<DropdownDivider />
-				<!-- 				<DropdownItem class="italic font-light">moodtrail.supp@gmail.com</DropdownItem>
-				<DropdownDivider /> -->
 				<form method="POST" action="/logout">
 					<DropdownItem type="submit">Log out</DropdownItem>
 				</form>
