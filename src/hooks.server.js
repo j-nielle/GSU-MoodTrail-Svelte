@@ -33,7 +33,7 @@ export const handle = async ({ event, resolve }) => {
 
 	const adminPath = '/settings/manage-users';
 	if ( event.url.pathname === adminPath || (event.url.pathname === adminPath && event.request.method === 'POST')) {
-		if (session?.user.role != 'admin') {
+		if (session?.user.user_metadata.role != 'admin') {
 			throw redirect(303, '/settings/account');
 		}
 	}

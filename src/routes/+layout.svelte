@@ -78,7 +78,7 @@
 			currentUser = {
 				email: session.user.email,
 				username: user.username,
-				role: user.role
+				role: session.user.user_metadata.role
 			};
 		}
 	};

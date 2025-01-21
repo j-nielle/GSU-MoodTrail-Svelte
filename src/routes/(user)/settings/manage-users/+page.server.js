@@ -14,9 +14,9 @@ export async function load({ locals: { supabase, getSession } }) {
 
 	try {
 		const { data, error: getUsersError } = await supabase
-		.from('Users')
-		.select()
-		.order('username', { ascending: true });
+			.from('Users')
+			.select('*')
+			.order('username', { ascending: true });
 
 		if (getUsersError) throw getUsersError;
 
@@ -28,8 +28,8 @@ export async function load({ locals: { supabase, getSession } }) {
 		const users = data.filter((user) => { return user.id != currentAdmin.id });
 
 		return {
-			users: users || [],
-			session: session
+			users,
+			session
 		};
 	} catch (error) {
 		console.error(error)
@@ -53,7 +53,7 @@ export const actions = {
 		const email = formData?.get('addEmail');
 		const password = formData?.get('addPassword');
 
-		if (!username || !role || !email || !password){
+		if (!username || !role || !email || !password) {
 			return {
 				error: "Missing fields. Please try again later.",
 				success: false
@@ -73,11 +73,11 @@ export const actions = {
 
 				return {
 					success: true,
-					successMsg: username+"'s account added successfully!",
+					successMsg: username + "'s account added successfully!",
 					error: false
 				}
 			} catch (error) {
-				console.error("ERROR:",error.message)
+				console.error("ERROR:", error.message)
 				return fail(400, {
 					error: error.message,
 					success: false
@@ -102,45 +102,44 @@ export const actions = {
 		const newUsername = formData?.get('editUsername');
 		const newRole = formData?.get('editRole');
 		const newEmail = formData?.get('editEmail');
-		// console.log(formData)
-		if(userID == user.id){ // just in case
-			if(newRole != user.role){
+
+		if (userID == user.id) { // just in case
+			if (newRole != user.role) {
 				return {
 					error: "Unable to change current user's role.",
 					success: false
 				};
 			}
 		}
-		else if (!userID || !newEmail || !newRole || !newUsername){
+		else if (!userID || !newEmail || !newRole || !newUsername) {
 			return {
 				error: "Missing fields. Please try again later.",
 				success: false
 			};
 		}
-		else{
+		else {
 			try {
 				const { error: getUserByIdError } = await adminAuthClient.getUserById(userID);
-				
+
 				if (getUserByIdError) throw getUserByIdError;
 
 				const { error: updateUserByIdError } = await adminAuthClient.updateUserById(userID, {
 					email: newEmail,
-					user_metadata: { 
-						username: newUsername, 
-						role: newRole 
+					user_metadata: {
+						username: newUsername,
+						role: newRole
 					},
 					role: newRole
 				});
-
 				if (updateUserByIdError) throw updateUserByIdError;
 
 				return {
 					success: true,
-					successMsg: "An account has been updated successfully!",
+					successMsg: "Successfully updated user",
 					error: false
 				}
 			} catch (error) {
-				console.error("ERROR:",error.message)
+				console.error("ERROR:", error.message)
 				return fail(400, {
 					error: error.message,
 					success: false
@@ -149,7 +148,7 @@ export const actions = {
 		}
 	},
 
-	removeUser: async ({ request, locals: { supabase }  }) => {
+	removeUser: async ({ request, locals: { supabase } }) => {
 		const supabaseAdminClient = createClient(PUBLIC_SUPABASE_URL, SECRET_SERVICE_ROLE_KEY, {
 			auth: {
 				autoRefreshToken: false,
@@ -161,8 +160,8 @@ export const actions = {
 
 		const formData = await request.formData();
 		const userID = formData?.get('userID');
-		
-		if(userID == user.id){ // just in case
+
+		if (userID == user.id) { // just in case
 			return {
 				error: "Unable to delete current user.",
 				success: false
@@ -171,7 +170,7 @@ export const actions = {
 		else {
 			try {
 				const { error: deleteUserError } = await adminAuthClient.deleteUser(userID);
-				
+
 				if (deleteUserError) throw deleteUserError;
 
 				return {
@@ -180,7 +179,7 @@ export const actions = {
 					error: false
 				};
 			} catch (error) {
-				console.error("ERROR:",error.message)
+				console.error("ERROR:", error.message)
 				return fail(400, {
 					error: error.message,
 					success: false
