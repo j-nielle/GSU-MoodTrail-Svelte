@@ -40,6 +40,7 @@
 	import { exportStudentData } from '$lib/stores/index.js';
 	import FileSaver from 'file-saver';
 	import * as XLSX from 'xlsx';
+	import { displayTime } from '$lib/helpers/datetime.ts';
 
 	export let data;
 	export let form;
@@ -85,18 +86,16 @@
 	let pieChartData,
 		lcBtnColors = {};
 
-	let newMoodEntry = false;
+	let addMoodModalOpen = false;
 
 	const divClass =
 		'bg-white space-y-4 dark:bg-gray-800 dark:text-gray-400 rounded-lg border border-gray-200 dark:border-gray-700 divide-gray-200 dark:divide-gray-700 shadow-md p-4 sm:p-6 text-slate-950 flex flex-col';
 
 	let currentStudentID;
 
-	let exportModalState = false;
+	let exportModalOpen = false;
 
-	let addedMoodEntryAlert = false;
-
-	let loggedBy = '';
+	let newEntryAlert = false;
 
 	let hasMoodEntries = false;
 	let entries = [];
@@ -104,80 +103,26 @@
 	$: selected = selectedCollege && selectedCourse && selectedYearLevel && selectedStudent;
 
 	onMount(() => {
-		const studentChartChannel = supabase
-			.channel('studentChartChannel')
-			.on(
-				'postgres_changes',
-				{
-					event: '*',
-					schema: 'public',
-					table: 'StudentMoodEntries'
-				},
-				(payload) => {
-					if (payload.eventType === 'INSERT') {
-						addedMoodEntryAlert = true;
+		const moodAnalytics = supabase.channel('moodAnalytics').on(
+			'postgres_changes',
+			{
+				event: '*',
+				schema: 'public',
+				table: 'StudentMoodEntries'
+			},
+			(payload) => {
+				if (payload.eventType === 'INSERT') {
+					newEntryAlert = true;
 
-						setTimeout(() => {
-							addedMoodEntryAlert = false;
-						}, 1000);
-
-						studentMoodData = _.cloneDeep([...studentMoodData, payload.new]);
-						studentMoodData.sort((currentElem, nextElem) => {
-							// sort by date (asc)
-							const currentDate = new Date(currentElem.created_at);
-							const nextDate = new Date(nextElem.created_at);
-							return currentDate - nextDate;
-						});
-					} else if (payload.eventType === 'UPDATE') {
-						const updatedIndex = studentMoodData.findIndex(
-							(student) => student.id === payload.old.id
-						);
-
-						if (updatedIndex !== -1) {
-							studentMoodData[updatedIndex] = payload.new;
-						}
-
-						studentMoodData = _.cloneDeep(studentMoodData);
-					} else if (payload.eventType === 'DELETE') {
-						const updatedStudentMoodData = studentMoodData.filter(
-							(student) => student.id !== payload.old.id
-						);
-						studentMoodData = updatedStudentMoodData;
-					}
+					setTimeout(() => {
+						newEntryAlert = false;
+					}, 1000);
 				}
-			)
-			.on(
-				'postgres_changes',
-				{
-					event: '*',
-					schema: 'public',
-					table: 'Student'
-				},
-				(payload) => {
-					if (payload.eventType === 'INSERT') {
-						students = _.cloneDeep([payload.new, ...students]).sort((currentElem, nextElem) =>
-							currentElem.student_name.localeCompare(nextElem.student_name)
-						);
-					} else if (payload.eventType === 'UPDATE') {
-						const updatedIndex = students.findIndex((student) => student.id === payload.old.id);
-
-						if (updatedIndex !== -1) {
-							students[updatedIndex] = payload.new;
-						}
-
-						students = _.cloneDeep(students).sort((currentElem, nextElem) =>
-							currentElem.student_name.localeCompare(nextElem.student_name)
-						);
-					} else if (payload.eventType === 'DELETE') {
-						const updatedStudentsData = students.filter((student) => student.id !== payload.old.id);
-						students = updatedStudentsData;
-					}
-				}
-			)
-			.subscribe();
+			}
+		);
 
 		return () => {
-			studentChartChannel.unsubscribe();
+			moodAnalytics.unsubscribe();
 		};
 	});
 
@@ -197,10 +142,6 @@
 			entries = studentMoodData?.filter((student) => student.student_id == searchTerm);
 		}
 		currentStudentID = result?.student_id;
-	}
-
-	$: {
-		console.log(entries, result, hasMoodEntries);
 	}
 
 	$: if (students?.length > 0) {
@@ -428,47 +369,34 @@
 		}
 	}
 
-	$: if (exportModalState) {
-		// get all property names (keys) of the first object in the `result` array and storing them in the keys array.
-		let keys = Object.keys(result[0]);
-		keys[keys.indexOf('mood_score')] = 'mood'; // rename `mood_score` with `mood`
-		keys[keys.indexOf('reason_score')] = 'reason'; // rename `reason_score` with `reason`
-		keys.splice(keys.indexOf('created_at'), 1, 'date', 'time'); // rename `created_at` with `date` and `time`
+	$: if (exportModalOpen) {
+		let keys = Object.keys(result);
 
-		let values = result?.map((obj) => {
-			let newObj = { ...obj }; // clone the object
+		keys[keys.indexOf('mood_score')] = 'mood';
+		keys[keys.indexOf('reason_score')] = 'reason';
+		keys[keys.indexOf('created_at')] = 'datetime';
 
-			// replace the `mood_score` and `reason_score` values with their corresponding keys
-			// e.g. 1 -> 'Calm', -4 -> 'Sad', etc.
-			// e.g. 1 -> 'Family', 6 -> 'Unwilling to specify', etc.
-			newObj.mood = Object.keys(mood).find((key) => mood[key] === Number(obj.mood_score));
-			newObj.reason = Object.keys(reason).find((key) => reason[key] === Number(obj.reason_score));
+		let newObj = { ...result };
 
-			let createdAt = new Date(obj.created_at); // create a new Date object from the `created_at` value
-			newObj.date = createdAt.toISOString().split('T')[0]; // get the date
-			newObj.time = createdAt.toTimeString().split(' ')[0]; // get the time
+		newObj.mood = Object.keys(mood).find((key) => mood[key] === Number(result.mood_score));
+		newObj.reason = Object.keys(reason).find((key) => reason[key] === Number(result.reason_score));
 
-			delete newObj.created_at; // delete the `created_at` property
-			delete newObj.mood_score; // delete the `mood_score` property
-			delete newObj.reason_score; // delete the `reason_score` property
+		newObj.datetime = displayTime(result.created_at);
 
-			// create an empty object for the new object
-			let orderedObj = {};
+		delete newObj.created_at;
+		delete newObj.mood_score;
+		delete newObj.reason_score;
 
-			// iterate over each key in the keys array so that the properties are added in the correct order
-			for (let key of keys) {
-				// add each key-value pair to the new object
-				// in simpler terms, this is just a reordering of the properties of the object
-				orderedObj[key] = newObj[key];
-			}
+		let orderedObj = {};
 
-			// now orderedObj is the new object that has the properties in the correct order
-			newObj = orderedObj;
+		for (let key of keys) {
+			orderedObj[key] = newObj[key];
+		}
 
-			return Object.values(newObj); // return the values of the new object
-		});
+		newObj = orderedObj;
 
-		exportStudentData.update(() => [keys, ...values]); // update the exportStudentData store with the new data
+		const values = Object.values(newObj);
+		exportStudentData.update(() => [keys, values]);
 	}
 
 	async function handleExport() {
@@ -539,23 +467,18 @@
 			items={student}
 			bind:value={selectedStudent}
 		/>
-		<div class="space-x-2">
-			<Button class="h-11 w-fit" size="sm" color="dark" on:click={() => goto('/students/list')}>
-				Back to Student List
+		{#if result}
+			<Button
+				class="h-11 w-fit"
+				size="sm"
+				color="green"
+				on:click={() => {
+					addMoodModalOpen = true;
+				}}
+			>
+				Add Mood Entry
 			</Button>
-			{#if result}
-				<Button
-					class="h-11 w-fit"
-					size="sm"
-					color="green"
-					on:click={() => {
-						newMoodEntry = true;
-					}}
-				>
-					Add Mood Entry
-				</Button>
-			{/if}
-		</div>
+		{/if}
 		{#if entries.length}
 			<Tooltip
 				placement="top"
@@ -606,7 +529,7 @@
 			<Button
 				id="exportStudentData"
 				class="h-11 shadow-md p-4 items-center"
-				on:click={() => (exportModalState = true)}
+				on:click={() => (exportModalOpen = true)}
 			>
 				<DownloadSolid tabindex="-1" class="text-white focus:outline-none" />
 			</Button>
@@ -616,13 +539,13 @@
 	<div class={divClass}>
 		<div class="flex space-x-6 justify-between">
 			<div class="flex flex-col">
-				{#if addedMoodEntryAlert}
+				{#if newEntryAlert}
 					<Alert color="green" class="mb-2"
 						><span class="font-medium">Mood entry added succesfully!</span></Alert
 					>
 					<p class="hidden">
 						{setTimeout(() => {
-							addedMoodEntryAlert = false;
+							newEntryAlert = false;
 						}, 3000)}
 					</p>
 				{:else if form?.error}
@@ -689,7 +612,7 @@
 										</p>
 										<p class="text-sm space-x-1">
 											<span class="text-sm font-semibold text-zinc-800">Latest Log Time:</span>
-											{result.created_at}
+											{displayTime(result.created_at)}
 											{#if result.created_by != null}
 												<Badge border color="purple">
 													{result.created_by}
@@ -826,7 +749,7 @@
 	</div>
 </div>
 
-<Modal title="Add New Mood Entry" size="xs" bind:open={newMoodEntry} class="w-full">
+<Modal title="Add New Mood Entry" size="xs" bind:open={addMoodModalOpen} class="w-full">
 	<form class="flex flex-col" method="POST" action="?/addMoodEntry" use:enhance>
 		<p class="text-sm mb-3"><strong>Student ID:</strong> {currentStudentID}</p>
 		<input type="hidden" id="studentID" name="studentID" bind:value={currentStudentID} />
@@ -850,7 +773,7 @@
 			/>
 		</div>
 
-		<Button type="submit" class="w-full mt-3" on:click={() => (newMoodEntry = false)}
+		<Button type="submit" class="w-full mt-3" on:click={() => (addMoodModalOpen = false)}
 			>SAVE MOOD ENTRY</Button
 		>
 	</form>
@@ -859,40 +782,34 @@
 <Modal
 	title="Export to Microsoft Excel spreadsheet (.xlsx)"
 	size="lg"
-	bind:open={exportModalState}
-	class="max-w-full"
+	bind:open={exportModalOpen}
+	class="max-w-lg"
 >
 	<p class="text-sm text-black uppercase font-semibold">First row (preview):</p>
 	<Table class="w-fit">
-		<TableHead class="bg-zinc-100 border border-t border-zinc-300 top-0 sticky text-center">
-			<TableHeadCell class="text-center">#</TableHeadCell>
-			<TableHeadCell class="text-center">Student ID</TableHeadCell>
-			<TableHeadCell class="text-center">Name</TableHeadCell>
-			<TableHeadCell class="text-center">Course</TableHeadCell>
-			<TableHeadCell class="text-center">Year Level</TableHeadCell>
-			<TableHeadCell class="text-center">College</TableHeadCell>
-			<TableHeadCell class="text-center">Mood</TableHeadCell>
-			<TableHeadCell class="text-center">Reason</TableHeadCell>
-			<TableHeadCell class="text-center">Date</TableHeadCell>
-			<TableHeadCell class="text-center">Time</TableHeadCell>
-			<TableHeadCell class="text-center">Recorded By</TableHeadCell>
+		<TableHead
+			class="bg-zinc-100 border border-t border-zinc-300 *:text-cente top-0 sticky text-center"
+		>
+			<TableHeadCell>#</TableHeadCell>
+			<TableHeadCell>Student ID</TableHeadCell>
+			<TableHeadCell>Name</TableHeadCell>
+			<TableHeadCell>Course</TableHeadCell>
+			<TableHeadCell>Year Level</TableHeadCell>
+			<TableHeadCell>College</TableHeadCell>
+			<TableHeadCell>Mood</TableHeadCell>
+			<TableHeadCell>Reason</TableHeadCell>
+			<TableHeadCell>Datetime</TableHeadCell>
+			<TableHeadCell>Created By</TableHeadCell>
 		</TableHead>
 		<TableBody tableBodyClass="divide-y bg-white">
 			{#if $exportStudentData?.length === 0}
 				<TableBodyRow class="border border-zinc-300 text-center">
-					<TableBodyCell>No data</TableBodyCell>
-					<TableBodyCell>No data</TableBodyCell>
-					<TableBodyCell>No data</TableBodyCell>
-					<TableBodyCell>No data</TableBodyCell>
-					<TableBodyCell>No data</TableBodyCell>
-					<TableBodyCell>No data</TableBodyCell>
-					<TableBodyCell>No data</TableBodyCell>
-					<TableBodyCell>No data</TableBodyCell>
-					<TableBodyCell>No data</TableBodyCell>
-					<TableBodyCell>No data</TableBodyCell>
+					{#each Array(10) as _, i (i)}
+						<TableBodyCell>No data</TableBodyCell>
+					{/each}
 				</TableBodyRow>
 			{:else}
-				{#each $exportStudentData?.slice(1, 2) as student}
+				{#each $exportStudentData.slice(1) as student}
 					<TableBodyRow>
 						{#each student as data}
 							<TableBodyCell>{data}</TableBodyCell>
@@ -904,7 +821,7 @@
 	</Table>
 	<div class="flex flex-row space-x-3">
 		<Button class="w-full mt-3" on:click={handleExport}>CONFIRM EXPORT</Button>
-		<Button color="red" class="w-full mt-3" on:click={() => (exportModalState = false)}
+		<Button color="red" class="w-full mt-3" on:click={() => (exportModalOpen = false)}
 			>CANCEL</Button
 		>
 	</div>

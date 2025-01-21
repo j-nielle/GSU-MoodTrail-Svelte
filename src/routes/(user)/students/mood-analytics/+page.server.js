@@ -47,26 +47,28 @@ export const actions = {
 	addMoodEntry: async ({ request, locals: { supabase, getSession } }) => {
 		const formData = await request.formData();
 
-		const studentID = formData?.get('studentID');
-		const addMood = formData?.get('addMood');
-		const addReason = formData?.get('addReason');
+		const student_id = formData?.get('studentID');
+		const mood_id = formData?.get('addMood');
+		const reason_id = formData?.get('addReason');
 
 		try {
 			const { user } = await getSession();
-			const currentUserId = user?.id;
-
-			const { error: insertMoodEntryError } = await supabase
+			const created_by = user?.user_metadata.role; // user_metadata: { email_verified: true, role: 'admin', username: 'Admin' },
+		
+			const { error: insertError } = await supabase
 				.from('StudentMood')
 				.insert([
 					{
-						student_id: studentID, mood_id: addMood, reason_id: addReason,
-						created_by: currentUserId
+						student_id,
+						mood_id,
+						reason_id,
+						created_by
 					},
 				])
 				.select()
 
-			if(insertMoodEntryError) {
-				throw insertMoodEntryError;
+			if (insertError) {
+				throw insertError;
 			}
 			return {
 				success: true,
