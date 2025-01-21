@@ -1642,9 +1642,9 @@
 </Modal>
 
 <Modal class="flex relative w-full max-h-full" bind:open={importExportModalState}>
-	<Tabs style="underline" contentClass="bg-white rounded-lg">
+	<Tabs style="underline" contentClass="bg-white rounded-lg" divider={false}>
 		<TabItem open title="FORMAT FOR IMPORT">
-			<div class="flex flex-col my-4 space-y-4">
+			<div class="flex flex-col gap-y-4">
 				<p class="text-sm text-black uppercase font-semibold">Student:</p>
 				<Table striped divClass="relative overflow-x-auto shadow-md" class="table-auto overflow-x-auto min-w-full">
 					<TableHead class="bg-zinc-100 border border-t border-zinc-300 top-0 sticky lowercase text-center">
