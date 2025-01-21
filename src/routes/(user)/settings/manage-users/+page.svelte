@@ -53,22 +53,66 @@
 				{
 					event: '*',
 					schema: 'public',
-					table: 'Users'
+					table: 'StudentMoodEntries'
 				},
 				(payload) => {
 					if (payload.eventType === 'INSERT') {
-						usersData = _.cloneDeep([payload.new, ...usersData]);
+						addedMoodEntryAlert = true;
+
+						setTimeout(() => {
+							addedMoodEntryAlert = false;
+						}, 1000);
+
+						studentMoodData = _.cloneDeep([...studentMoodData, payload.new]);
+						studentMoodData.sort((currentElem, nextElem) => {
+							// sort by date (asc)
+							const currentDate = new Date(currentElem.created_at);
+							const nextDate = new Date(nextElem.created_at);
+							return currentDate - nextDate;
+						});
 					} else if (payload.eventType === 'UPDATE') {
-						const updatedIndex = usersData.findIndex((user) => user.id === payload.old.id);
+						const updatedIndex = studentMoodData.findIndex(
+							(student) => student.id === payload.old.id
+						);
 
 						if (updatedIndex !== -1) {
-							usersData[updatedIndex] = payload.new;
+							studentMoodData[updatedIndex] = payload.new;
 						}
 
-						usersData = _.cloneDeep(usersData);
+						studentMoodData = _.cloneDeep(studentMoodData);
 					} else if (payload.eventType === 'DELETE') {
-						const updatedUsersData = usersData.filter((user) => user.id !== payload.old.id);
-						usersData = updatedUsersData;
+						const updatedStudentMoodData = studentMoodData.filter(
+							(student) => student.id !== payload.old.id
+						);
+						studentMoodData = updatedStudentMoodData;
+					}
+				}
+			)
+			.on(
+				'postgres_changes',
+				{
+					event: '*',
+					schema: 'public',
+					table: 'Student'
+				},
+				(payload) => {
+					if (payload.eventType === 'INSERT') {
+						students = _.cloneDeep([payload.new, ...students]).sort((currentElem, nextElem) =>
+							currentElem.name.localeCompare(nextElem.name)
+						);
+					} else if (payload.eventType === 'UPDATE') {
+						const updatedIndex = students.findIndex((student) => student.id === payload.old.id);
+
+						if (updatedIndex !== -1) {
+							students[updatedIndex] = payload.new;
+						}
+
+						students = _.cloneDeep(students).sort((currentElem, nextElem) =>
+							currentElem.name.localeCompare(nextElem.name)
+						);
+					} else if (payload.eventType === 'DELETE') {
+						const updatedStudentsData = students.filter((student) => student.id !== payload.old.id);
+						students = updatedStudentsData;
 					}
 				}
 			)
