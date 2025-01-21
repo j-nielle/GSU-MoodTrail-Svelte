@@ -14,17 +14,17 @@
 		TableBodyRow,
 		TableHead,
 		TableHeadCell,
-		Tooltip, 
-		Modal, 
+		Tooltip,
+		Modal,
 		Checkbox,
-		Label, 
+		Label,
 		Fileupload,
-		Tabs, 
-		TabItem, 
+		Tabs,
+		TabItem
 	} from 'flowbite-svelte';
 	import {
-		RocketOutline, 
-		AdjustmentsVerticalSolid, 
+		RocketOutline,
+		AdjustmentsVerticalSolid,
 		ChartMixedOutline,
 		ChartOutline,
 		TableColumnOutline,
@@ -38,22 +38,23 @@
 		NegativeBarChart,
 		Histogram,
 		SimpleBarChart,
-		CalendarChart,
+		CalendarChart
 	} from '$lib/components/charts/index.js';
 	import { focusTable, consistentLowMoods, exportMoodsData } from '$lib/stores/index.js';
 	import { CardInfo } from '$lib/components/elements/index.js';
-	import { 
-		mood, 
-		reason, 
-		yearLvl, 
-		daysShort, 
-		moodChoices, 
-		reasonChoices, 
-		getWeekNumberString, 
-		requestTypes,
+	import {
+		mood,
+		reason,
+		yearLvl,
+		daysShort,
+		moodChoices,
+		reasonChoices,
+		getWeekNumberString,
+		requestTypes
 	} from '$lib/constants/index.js';
-	import FileSaver from "file-saver";
-  import * as XLSX from "xlsx";
+	import { displayTime } from '$lib/helpers/datetime.ts';
+	import FileSaver from 'file-saver';
+	import * as XLSX from 'xlsx';
 	import * as echarts from 'echarts';
 
 	export let data;
@@ -120,30 +121,38 @@
 	let xDataSBC = [],
 		yDataSBC = [];
 
-	let selectedReasonMarkType = 'average', sbcMarkType = '';
-	let selectedReasonCalendar = '', selectedMoodCalendar = '', selectedCalendarYear = '';
+	let selectedReasonMarkType = 'average',
+		sbcMarkType = '';
+	let selectedReasonCalendar = '',
+		selectedMoodCalendar = '',
+		selectedCalendarYear = '';
 
 	let calendarYearChoices = [];
-	
+
 	let chartFilterModalState = false;
 	let tableRef;
 
 	let selectedMoodScore;
-	let xMoodWeek = [], yMoodWeekEntry = [];
-	let yReasonPercentage = [], xReason = [];
+	let xMoodWeek = [],
+		yMoodWeekEntry = [];
+	let yReasonPercentage = [],
+		xReason = [];
 
 	let lowMoodsOnly = false;
 
 	let mostFrequentRequestType = '';
 
-	let heatmap = false, radar = false, moodReasonCalendarChart = false;
+	let heatmap = false,
+		radar = false,
+		moodReasonCalendarChart = false;
 
 	let importExportModalState = false;
 
 	let currentDataView = '';
 
-	let currentUserID = data?.user?.id, currentUserName = data?.user?.user_metadata?.username;
-	
+	let currentUserID = data?.user?.id,
+		currentUserName = data?.user?.user_metadata?.username;
+
 	let importError = '';
 
 	$: ({ supabase } = data);
@@ -151,21 +160,28 @@
 	onMount(() => {
 		const timer = setInterval(updateTime, interval);
 
-		const dashboardChannel = supabase.channel('dashboard')
-			.on('postgres_changes', {
+		const dashboardChannel = supabase
+			.channel('dashboard')
+			.on(
+				'postgres_changes',
+				{
 					event: '*',
 					schema: 'public',
 					table: 'StudentMoodEntries'
-				},(payload) => {
+				},
+				(payload) => {
 					if (payload.eventType === 'INSERT') {
 						studentMoodData = _.cloneDeep([...studentMoodData, payload.new]);
-						studentMoodData.sort((currentElem, nextElem) => { // sort by date (asc)
+						studentMoodData.sort((currentElem, nextElem) => {
+							// sort by date (asc)
 							const currentDate = new Date(currentElem.created_at);
 							const nextDate = new Date(nextElem.created_at);
 							return currentDate - nextDate;
 						});
 					} else if (payload.eventType === 'UPDATE') {
-						const updatedIndex = studentMoodData.findIndex((student) => student.id === payload.old.id);
+						const updatedIndex = studentMoodData.findIndex(
+							(student) => student.id === payload.old.id
+						);
 
 						if (updatedIndex !== -1) {
 							studentMoodData[updatedIndex] = payload.new;
@@ -179,21 +195,30 @@
 						studentMoodData = updatedStudentMoodData;
 					}
 				}
-			).on('postgres_changes', {
+			)
+			.on(
+				'postgres_changes',
+				{
 					event: 'INSERT',
 					schema: 'public',
 					table: 'AnonMood'
-				}, (payload) => {
+				},
+				(payload) => {
 					anonMoodData = _.cloneDeep([...anonMoodData, payload.new]);
 				}
-			).on('postgres_changes', {
+			)
+			.on(
+				'postgres_changes',
+				{
 					event: 'INSERT',
 					schema: 'public',
 					table: 'GuestMood'
-				}, (payload) => {
+				},
+				(payload) => {
 					guestMoodData = _.cloneDeep([...guestMoodData, payload.new]);
 				}
-			).subscribe() // (status) => console.log('/dashboard', status));
+			)
+			.subscribe(); // (status) => console.log('/dashboard', status));
 
 		return () => {
 			clearInterval(timer);
@@ -205,7 +230,7 @@
 	 * View selected line chart (Today/Weekly/Monthly/Yearly/Overall).
 	 * @param {string} lineChart - The line chart selected by the user.
 	 */
-	 function selectLineChart(lineChart) {
+	function selectLineChart(lineChart) {
 		selectedLineChart = lineChart;
 	}
 
@@ -227,34 +252,34 @@
 
 	/**
 	 * Updates the `current` variable with the current date and time.
-	*/
+	 */
 	function updateTime() {
-		current = dayjs()
+		current = dayjs();
 	}
 
 	/**
 	 * Handles the click event on an element to smoothly scroll to a target element.
 	 * @param {MouseEvent} event
-	 * The target of this event is expected to have an 'id' attribute that corresponds to the 
+	 * The target of this event is expected to have an 'id' attribute that corresponds to the
 	 * id of the target element to scroll to.
-	*/
+	 */
 	function scrollIntoView({ target }) {
-    const targetElement = document?.getElementById(target.getAttribute('id'));
-    if (!targetElement) return;
+		const targetElement = document?.getElementById(target.getAttribute('id'));
+		if (!targetElement) return;
 		targetElement.scrollIntoView({
-     	behavior: 'smooth'
-    });
-  }
+			behavior: 'smooth'
+		});
+	}
 
 	/**
 	 * Handles the click event on a checkbox to show/hide a chart.
 	 * @param {boolean} checkedState - The checked state of the checkbox.
 	 * @param {MouseEvent} event
-	 * 
-	 * The target of this event is expected to have an 'id' attribute that corresponds to the 
+	 *
+	 * The target of this event is expected to have an 'id' attribute that corresponds to the
 	 * id of the target element to show/hide.
-	*/
-	function filterChart(checkedState, event){
+	 */
+	function filterChart(checkedState, event) {
 		const target = event.target;
 		const targetElement = document?.getElementById(target.getAttribute('id'));
 		if (!targetElement) return;
@@ -263,83 +288,121 @@
 		if (!aElement) return;
 
 		const href = aElement?.getAttribute('href');
-		const chartDiv = document.getElementById(href.slice(1))
+		const chartDiv = document.getElementById(href.slice(1));
 		if (!chartDiv) return;
 
 		if (target.checked) {
 			checkedState = true;
-			if(href.slice(1) == 'moodCalendar') {
-				chartDiv.classList.remove('hidden'); 
-				chartDiv.classList.add('flex', 'p-4', 'justify-center', 'self-center', 'items-center', 'w-full', 'bg-white', 'rounded', 'drop-shadow-md', 'hover:ring-1');
-			}
-			else{
+			if (href.slice(1) == 'moodCalendar') {
 				chartDiv.classList.remove('hidden');
-				chartDiv.classList.add('flex', 'flex-1', 'p-4', 'w-full', 'bg-white', 'rounded', 'justify-center', 'items-center', 'self-center', 'drop-shadow-md', 'hover:ring-1');
+				chartDiv.classList.add(
+					'flex',
+					'p-4',
+					'justify-center',
+					'self-center',
+					'items-center',
+					'w-full',
+					'bg-white',
+					'rounded',
+					'drop-shadow-md',
+					'hover:ring-1'
+				);
+			} else {
+				chartDiv.classList.remove('hidden');
+				chartDiv.classList.add(
+					'flex',
+					'flex-1',
+					'p-4',
+					'w-full',
+					'bg-white',
+					'rounded',
+					'justify-center',
+					'items-center',
+					'self-center',
+					'drop-shadow-md',
+					'hover:ring-1'
+				);
 			}
 		} else {
 			checkedState = false;
-			chartDiv.classList.remove('flex', 'flex-1', 'p-4', 'w-full', 'bg-white', 'rounded', 'justify-center', 'items-center', 'self-center', 'drop-shadow-md', 'hover:ring-1');
+			chartDiv.classList.remove(
+				'flex',
+				'flex-1',
+				'p-4',
+				'w-full',
+				'bg-white',
+				'rounded',
+				'justify-center',
+				'items-center',
+				'self-center',
+				'drop-shadow-md',
+				'hover:ring-1'
+			);
 			chartDiv.classList.add('hidden');
 		}
 	}
 
-	async function handleExport(){
+	async function handleExport() {
 		let data = $exportMoodsData;
-		const fileType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8";
-  	const fileExtension = ".xlsx";
-		const fileName = currentDataView + "_MoodData";
-		
+		const fileType =
+			'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8';
+		const fileExtension = '.xlsx';
+		const fileName = currentDataView + '_MoodData';
+
 		const workSheet = XLSX.utils.aoa_to_sheet(data);
-    const workBook = {
-      Sheets: { data: workSheet, cols: [] },
-      SheetNames: ["data"],
-    };
-    const excelBuffer = await XLSX.write(workBook, { bookType: "xlsx", type: "array" });
-    const fileData = new Blob([excelBuffer], { type: fileType });
-    FileSaver.saveAs(fileData, fileName + fileExtension);
+		const workBook = {
+			Sheets: { data: workSheet, cols: [] },
+			SheetNames: ['data']
+		};
+		const excelBuffer = await XLSX.write(workBook, { bookType: 'xlsx', type: 'array' });
+		const fileData = new Blob([excelBuffer], { type: fileType });
+		FileSaver.saveAs(fileData, fileName + fileExtension);
 	}
 
-	async function handleImport(event){
+	async function handleImport(event) {
 		const file = event.target.files[0];
 		const reader = new FileReader();
 
-		if(!file) {
+		if (!file) {
 			importError = 'No file selected.';
 			return;
-		}
-		else if(file.type != "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
+		} else if (file.type != 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
 			importError = 'Invalid file type. Please upload an .xlsx file.';
 			return;
 		}
 
 		reader.onload = async (e) => {
 			const data = new Uint8Array(e.target.result);
-			const workbook = XLSX.read(data, {type: 'array'});
-			
+			const workbook = XLSX.read(data, { type: 'array' });
+
 			const worksheetName = workbook.SheetNames[0];
 			const worksheet = workbook.Sheets[worksheetName];
-			
-			const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1, raw: false});
 
-			const keys = jsonData[0].map(value => value.toLowerCase());
+			const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
+
+			const keys = jsonData[0].map((value) => value.toLowerCase());
 
 			const dataColumns = {
-				'Guest': ['mood_score', 'reason_score', 'created_at'],
-				'Anon': ['mood_score', 'reason_score', 'created_at', 'course', 'year_level'],
-				'Student': ['student_id', 'mood_id', 'reason_id', 'created_at']
+				Guest: ['mood_score', 'reason_score', 'created_at'],
+				Anon: ['mood_score', 'reason_score', 'created_at', 'course', 'year_level'],
+				Student: ['student_id', 'mood_id', 'reason_id', 'created_at']
 			};
 
 			const checkMoodDataType = (values) => {
-				return values.every(value => keys.includes(value)) && keys.every(key => values.includes(key));
+				return (
+					values.every((value) => keys.includes(value)) && keys.every((key) => values.includes(key))
+				);
 			};
 
-			let moodDataType = Object.keys(dataColumns).find(type => checkMoodDataType(dataColumns[type]));
+			let moodDataType = Object.keys(dataColumns).find((type) =>
+				checkMoodDataType(dataColumns[type])
+			);
 
 			if (!moodDataType) {
 				importError = 'Invalid format. Please upload a file with the correct format.';
 				return;
 			}
-			
+
 			const arrayOfObjects = jsonData.slice(1).map((row) => {
 				return row.reduce((obj, item, index) => {
 					obj[keys[index]] = item;
@@ -347,28 +410,29 @@
 				}, {});
 			});
 
-			if(arrayOfObjects.length === 0) return; // if the file is empty, return
-			
+			if (arrayOfObjects.length === 0) return; // if the file is empty, return
+
 			try {
-				if(moodDataType == 'Student'){
-					const dataToInsert = arrayOfObjects.map(obj => ({
+				if (moodDataType == 'Student') {
+					const dataToInsert = arrayOfObjects.map((obj) => ({
 						student_id: obj.student_id,
 						mood_id: obj.mood_id,
 						reason_id: obj.reason_id,
 						created_at: obj.created_at,
-						created_by: currentUserID,
+						created_by: currentUserID
 					}));
-					
-					const studentIds = dataToInsert.map(obj => obj.student_id);
+
+					const studentIds = dataToInsert.map((obj) => obj.student_id);
 
 					const { data: Students, error: searchStudentErrror } = await supabase
 						.from('Student')
 						.select('*')
-						.in('student_id', studentIds)
-  
-					if(searchStudentErrror) throw searchStudentErrror;
-					else if(!Students || Students.length === 0) {
-						importError = 'One or more student not found in the database. Please create a student record first.';
+						.in('student_id', studentIds);
+
+					if (searchStudentErrror) throw searchStudentErrror;
+					else if (!Students || Students.length === 0) {
+						importError =
+							'One or more student not found in the database. Please create a student record first.';
 						return;
 					}
 
@@ -376,32 +440,30 @@
 						.from('StudentMood')
 						.insert(dataToInsert)
 						.select();
-							
-					if(insertStudentMoodError) throw insertStudentMoodError;
-				}
-				else if(moodDataType == 'Anon'){
-					const dataToInsert = arrayOfObjects.map(obj => ({
+
+					if (insertStudentMoodError) throw insertStudentMoodError;
+				} else if (moodDataType == 'Anon') {
+					const dataToInsert = arrayOfObjects.map((obj) => ({
 						mood_score: obj.mood_score,
 						reason_score: obj.reason_score,
 						created_at: obj.created_at,
 						course: obj.course,
 						year_level: obj.year_level,
-						created_by: currentUserName,
+						created_by: currentUserName
 					}));
 
 					const { error: insertAnonMoodError } = await supabase
 						.from('AnonMood')
 						.insert(dataToInsert)
 						.select();
-					
-					if(insertAnonMoodError) throw insertAnonMoodError;
-				}
-				else if(moodDataType == 'Guest'){
-					const dataToInsert = arrayOfObjects.map(obj => ({
+
+					if (insertAnonMoodError) throw insertAnonMoodError;
+				} else if (moodDataType == 'Guest') {
+					const dataToInsert = arrayOfObjects.map((obj) => ({
 						mood_score: obj.mood_score,
 						reason_score: obj.reason_score,
 						created_at: obj.created_at,
-						created_by: currentUserName,
+						created_by: currentUserName
 					}));
 
 					const { error: insertGuestMoodError } = await supabase
@@ -409,51 +471,51 @@
 						.insert(dataToInsert)
 						.select();
 
-        	if(insertGuestMoodError) throw insertGuestMoodError;
+					if (insertGuestMoodError) throw insertGuestMoodError;
 				}
 			} catch (error) {
 				importError = error.message;
-				console.error(error.message);	
+				console.error(error.message);
 			}
 		};
 		reader.readAsArrayBuffer(file);
 	}
 
 	$: {
-		if(switchMoodData.student) {
+		if (switchMoodData.student) {
 			dataType = studentMoodData;
 			currentDataView = 'Student';
 		} else if (switchMoodData.anon) {
 			dataType = anonMoodData;
 			currentDataView = 'Anon';
-		}	else if(switchMoodData.guest) {
+		} else if (switchMoodData.guest) {
 			dataType = guestMoodData;
 			selectedNHBarChart = 'reason';
 			currentDataView = 'Guest';
 		}
 	}
 
-	$: if(requestsData){
-		let getRequests = requestsData?.map(req => requestTypes[req.request_type]);
+	$: if (requestsData) {
+		let getRequests = requestsData?.map((req) => requestTypes[req.request_type]);
 		let uniqueRequestTypes = [...new Set(getRequests)];
 		let highestCount = 0;
 
-		uniqueRequestTypes?.forEach(requestType => {
+		uniqueRequestTypes?.forEach((requestType) => {
 			// this is the number of times the current request type appears in the array
-			let count = getRequests?.filter(type => type === requestType).length;
+			let count = getRequests?.filter((type) => type === requestType).length;
 			// if the current request type appears more times than the previous highest count,
 			if (count > highestCount) {
 				highestCount = count; // set the current count as the new highest count
 				mostFrequentRequestType = requestType; // set the current request type as the most frequent
 			}
 		});
-		
-		// if there are no requests, 
+
+		// if there are no requests,
 		if (uniqueRequestTypes?.length === 0) {
 			// set mostFrequentRequestType to 'No requests'
-			mostFrequentRequestType = "No requests";
+			mostFrequentRequestType = 'No requests';
 		}
-		// if there is only one request type, 
+		// if there is only one request type,
 		else if (uniqueRequestTypes?.length === 1) {
 			// set mostFrequentRequestType to that request type
 			mostFrequentRequestType = uniqueRequestTypes[0];
@@ -461,31 +523,35 @@
 		// if there are multiple request types with the same highest count,
 		else if (highestCount === uniqueRequestTypes?.length) {
 			// set mostFrequentRequestType to 'Equal counts for all types'
-			mostFrequentRequestType = "Equal counts for all types";
+			mostFrequentRequestType = 'Equal counts for all types';
 		}
 	}
 
 	$: if (dataType) {
-		// CALENDAR CHART 
-		calendarYearChoices = _.uniqBy(dataType?.map((item) => {
-			const date = +echarts.time.parse(item?.created_at);
-			const formattedDate = echarts.time.format(date, '{yyyy}', false); // format the date to 'yyyy', false means not UTC
-			return { name: formattedDate, value: formattedDate };
-		}), 'name');
+		// CALENDAR CHART
+		calendarYearChoices = _.uniqBy(
+			dataType?.map((item) => {
+				const date = +echarts.time.parse(item?.created_at);
+				const formattedDate = echarts.time.format(date, '{yyyy}', false); // format the date to 'yyyy', false means not UTC
+				return { name: formattedDate, value: formattedDate };
+			}),
+			'name'
+		);
 
 		// FOR HEATMAP CHART - MOOD FREQUENCY BY DAY AND HOUR
 
 		// apply lowMoodsOnly filter if true
 		// which is basically filtering out mood scores from -4 to -1
-		let filteredDataType = lowMoodsOnly ? 
-			dataType?.filter(data => data.mood_score >= -4 && data.mood_score <= -1) : dataType;
-		
+		let filteredDataType = lowMoodsOnly
+			? dataType?.filter((data) => data.mood_score >= -4 && data.mood_score <= -1)
+			: dataType;
+
 		// e.g { '0,1': [ { id: ... }, { id: ... } ], '3,14': [ { id: ... } ] }
 		const groupedData = _.groupBy(filteredDataType, (data) => {
 			const date = new Date(data.created_at);
 
 			// getDay() returns 0 for Sunday, 1 for Monday, etc. (0-6)
-			// getHours() returns the hour (0-23) 
+			// getHours() returns the hour (0-23)
 			return [date.getDay(), date.getHours()];
 		});
 
@@ -500,8 +566,8 @@
 		const moodCount = {}; // object to store the count of each mood
 
 		/**
-		 * example: 
-		 * 
+		 * example:
+		 *
 		 * moodCount = {
 		 *	Happy: 3,
 		 *	Calm: 2,
@@ -511,14 +577,14 @@
 		 *	Neutral: 1,
 		 *	Bored: 3
 		 * }
-		*/
+		 */
 		dataType.forEach((item) => {
 			const moodScore = item.mood_score; // get mood_score from the current item
 			let moodLabel = null;
 
 			// iterate over each key in the mood object (basically mood label:value pairs)
 			for (const key in mood) {
-				// if the current key's value matches the moodScore, 
+				// if the current key's value matches the moodScore,
 				// make key the value of moodLabel and break the loop
 				if (mood[key] == moodScore) {
 					moodLabel = key;
@@ -533,14 +599,14 @@
 			}
 		});
 
-		// make a new object from moodCount, 
+		// make a new object from moodCount,
 		// but with entries sorted by their values a.k.a counts
 		const sortedMoodCount = Object.fromEntries(
 			Object.entries(moodCount).sort(([, curr], [, next]) => curr - next)
 		);
 
 		xDataMBC = _.keys(sortedMoodCount); // 'Happy', 'Calm', 'Sad', 'Excited', 'Nervous', 'Neutral', 'Bored
-		yDataMBC = _.values(sortedMoodCount); // 3, 2, 1, 1, 1, 1, 3 
+		yDataMBC = _.values(sortedMoodCount); // 3, 2, 1, 1, 1, 1, 3
 
 		// FOR SIMPLE BAR CHART - ASSOCIATED REASON FREQUENCY
 		const reasonCount = {}; // object to store the count of each reason
@@ -550,14 +616,17 @@
 			const reasonScore = item.reason_score; // get reason_score from the current item
 			let reasonLabel = null; // initialize reasonLabel to null
 
-			for (const key in reason) { // iterate over each key in the reason object
-				if (reason[key] == reasonScore) { // if the current key's value matches the reasonScore,
+			for (const key in reason) {
+				// iterate over each key in the reason object
+				if (reason[key] == reasonScore) {
+					// if the current key's value matches the reasonScore,
 					reasonLabel = key; // make key the value of reasonLabel and break the loop
 					break;
 				}
 			}
 
-			if (reasonLabel) { // if reasonLabel was found, increment its count in reasonCount object
+			if (reasonLabel) {
+				// if reasonLabel was found, increment its count in reasonCount object
 				reasonCount[reasonLabel] = (reasonCount[reasonLabel] || 0) + 1; // (or initialize to 1 if not present)
 			}
 		});
@@ -601,8 +670,8 @@
 			const todayMostFreqMood = _.head(_(todaysMoodLabels).countBy().entries().maxBy(_.last));
 			const todayMostFreqReason = _.head(_(todaysReasonLabels).countBy().entries().maxBy(_.last));
 
-			if(todayMostFreqMood && todayMostFreqReason) {
-				topMoodReason = todayMostFreqMood + " - " + todayMostFreqReason;
+			if (todayMostFreqMood && todayMostFreqReason) {
+				topMoodReason = todayMostFreqMood + ' - ' + todayMostFreqReason;
 			}
 		} else if (selectedLineChart === 'overall') {
 			lineChartTitle = 'Average Moods';
@@ -610,8 +679,8 @@
 			// group each mood entries by day
 			const groupedByDay = _.groupBy(dataType, (entry) =>
 				dayjs(entry.created_at).format('YYYY-MM-DD')
-			); 
-			
+			);
+
 			overall = _.sortBy(_.keys(groupedByDay)); // x, all days recorded (sorted in ascending order)
 
 			// y, average mood score for each day
@@ -653,13 +722,17 @@
 				.shift();
 
 			// get the key of the constant mood object that has the value equal to the moodValue
-			const overallMostFreqMood = Object.keys(mood).find((key) => mood[key] == parseInt(moodValue[0]));
+			const overallMostFreqMood = Object.keys(mood).find(
+				(key) => mood[key] == parseInt(moodValue[0])
+			);
 
 			// get the key of the constant reason object that has the value equal to the reasonValue
-			const overallMostFreqReason = Object.keys(reason).find( (key) => reason[key] === parseInt(reasonValue[0]));
+			const overallMostFreqReason = Object.keys(reason).find(
+				(key) => reason[key] === parseInt(reasonValue[0])
+			);
 
-			if(overallMostFreqMood && overallMostFreqReason) {
-				topMoodReason = overallMostFreqMood + " - " + overallMostFreqReason;
+			if (overallMostFreqMood && overallMostFreqReason) {
+				topMoodReason = overallMostFreqMood + ' - ' + overallMostFreqReason;
 			}
 		} else if (selectedLineChart === 'weekly') {
 			lineChartTitle = 'Average Moods';
@@ -668,7 +741,7 @@
 			const groupedByWeek = _.groupBy(dataType, (entry) =>
 				getWeekNumberString(dayjs(entry.created_at))
 			);
-			
+
 			weekly = _.sortBy(_.keys(groupedByWeek)); // x, all weeks recorded (sorted in ascending order)
 
 			// y, get the average mood score for each week
@@ -710,13 +783,17 @@
 				.shift();
 
 			// get the key of the constant mood object that has the value equal to the moodValue
-			const weeklyMostFreqMood = Object.keys(mood).find((key) => mood[key] == parseInt(moodValue[0]));
+			const weeklyMostFreqMood = Object.keys(mood).find(
+				(key) => mood[key] == parseInt(moodValue[0])
+			);
 
 			// get the key of the constant reason object that has the value equal to the reasonValue
-			const weeklyMostFreqReason = Object.keys(reason).find((key) => reason[key] == parseInt(reasonValue[0]));
-			
-			if(weeklyMostFreqMood && weeklyMostFreqReason) {
-				topMoodReason = weeklyMostFreqMood + " - " + weeklyMostFreqReason;
+			const weeklyMostFreqReason = Object.keys(reason).find(
+				(key) => reason[key] == parseInt(reasonValue[0])
+			);
+
+			if (weeklyMostFreqMood && weeklyMostFreqReason) {
+				topMoodReason = weeklyMostFreqMood + ' - ' + weeklyMostFreqReason;
 			}
 		} else if (selectedLineChart === 'monthly') {
 			lineChartTitle = 'Average Moods';
@@ -767,13 +844,17 @@
 				.shift();
 
 			// get the key of the constant mood object that has the value equal to the moodValue
-			const monthlyMostFreqMood = Object.keys(mood).find((key) => mood[key] == parseInt(moodValue[0]));
+			const monthlyMostFreqMood = Object.keys(mood).find(
+				(key) => mood[key] == parseInt(moodValue[0])
+			);
 
 			// get the key of the constant reason object that has the value equal to the reasonValue
-			const monthlyMostFreqReason = Object.keys(reason).find((key) => reason[key] == parseInt(reasonValue[0]));
+			const monthlyMostFreqReason = Object.keys(reason).find(
+				(key) => reason[key] == parseInt(reasonValue[0])
+			);
 
-			if(monthlyMostFreqMood && monthlyMostFreqReason) {
-				topMoodReason = monthlyMostFreqMood + " - " + monthlyMostFreqReason;
+			if (monthlyMostFreqMood && monthlyMostFreqReason) {
+				topMoodReason = monthlyMostFreqMood + ' - ' + monthlyMostFreqReason;
 			}
 		} else if (selectedLineChart === 'yearly') {
 			lineChartTitle = 'Average Moods';
@@ -822,13 +903,17 @@
 				.shift();
 
 			// get the key of the constant mood object that has the value equal to the moodValue
-			const yearlyMostFreqMood = Object.keys(mood).find((key) => mood[key] == parseInt(moodValue[0]));
+			const yearlyMostFreqMood = Object.keys(mood).find(
+				(key) => mood[key] == parseInt(moodValue[0])
+			);
 
 			// get the key of the constant reason object that has the value equal to the reasonValue
-			const yearlyMostFreqReason = Object.keys(reason).find((key) => reason[key] == parseInt(reasonValue[0]));
-			
-			if(yearlyMostFreqMood && yearlyMostFreqReason) {
-				topMoodReason = yearlyMostFreqMood + " - " + yearlyMostFreqReason;
+			const yearlyMostFreqReason = Object.keys(reason).find(
+				(key) => reason[key] == parseInt(reasonValue[0])
+			);
+
+			if (yearlyMostFreqMood && yearlyMostFreqReason) {
+				topMoodReason = yearlyMostFreqMood + ' - ' + yearlyMostFreqReason;
 			}
 		}
 
@@ -846,10 +931,9 @@
 			}
 		}
 
-		// loop through the student mood data and 
+		// loop through the student mood data and
 		// update the mood data object based on the mood and reason scores
 		for (const entry of dataType) {
-
 			// find the mood label corresponding to the mood score
 			const moodLabel = Object.keys(mood).find((key) => mood[key] == entry.mood_score);
 
@@ -865,21 +949,20 @@
 
 		// prepare data in a format suitable for a radar chart
 		moodRadarData = Object.keys(moodData).map((moodLabel) => ({
-
-			// map mood data to an array of values, 
+			// map mood data to an array of values,
 			// representing number of occurences for each reason under each mood
 			value: Object.keys(reason).map((reasonLabel) => moodData[moodLabel][reason[reasonLabel] - 1]),
 			name: moodLabel
 		}));
 
 		let maxCount = 0;
-		moodRadarData.forEach(mood => {
+		moodRadarData.forEach((mood) => {
 			const moodMax = Math.max(...mood.value);
 			if (moodMax > maxCount) maxCount = moodMax;
 		});
 
 		// scale factor for the maximum axis value
-		const scaleFactor = 1.2; 
+		const scaleFactor = 1.2;
 
 		// get the maximum axis value by multiplying the maximum count by the scale factor
 		const maxAxisValue = Math.ceil(maxCount * scaleFactor);
@@ -904,8 +987,7 @@
 				// if the course exists, push the mood score to its array
 				if (existingCourse) {
 					existingCourse.mood_scores.push(entry.mood_score);
-				} 
-				else { 
+				} else {
 					// if not, create a new object for it and push it to the accumulator
 					// which means that this is the first entry for this course
 					acc.push({ course: entry.course, mood_scores: [entry.mood_score] });
@@ -917,7 +999,8 @@
 			avgMoodByCourse = courseData?.map((course) => {
 				const moodScores = course.mood_scores; // get the mood scores for this course
 
-				if (moodScores.length > 0) { // if there are mood scores for this course
+				if (moodScores.length > 0) {
+					// if there are mood scores for this course
 
 					// get the total mood score for this course
 					const totalMoodScore = moodScores.reduce((sum, score) => sum + parseInt(score), 0);
@@ -925,7 +1008,8 @@
 					// get the average mood score for this course
 					const avgMoodScore = totalMoodScore / moodScores.length;
 
-					if (avgMoodScore < 0) { // if average mood score is negative
+					if (avgMoodScore < 0) {
+						// if average mood score is negative
 
 						// return an object with the average mood score as the value
 						// and the position of the label to the right of the bar
@@ -942,17 +1026,16 @@
 			// map over the courseData array and get the course labels
 			courseYData = courseData?.map((course) => course.course);
 		} else if (selectedNHBarChart === 'year_level' && !switchMoodData.guest) {
-
 			// reduce the dataType object to an array of objects
 			// where each object represents a year level and its mood scores
 			const yearLevelData = dataType?.reduce((acc, entry) => {
 				// find the year level in the accumulator
 				const yearLevel = acc.find((item) => item.yearLevel === entry.year_level);
 
-				if (yearLevel) { // if the year level exists, push the mood score to its array
+				if (yearLevel) {
+					// if the year level exists, push the mood score to its array
 					yearLevel.mood_scores.push(entry.mood_score);
-				} 
-				else { 
+				} else {
 					// if not, create a new object for it and push it to the accumulator
 					// which means that this is the first entry for this year level
 					acc.push({ yearLevel: entry.year_level, mood_scores: [entry.mood_score] });
@@ -965,7 +1048,8 @@
 			avgMoodByYearLvl = yearLevelData?.map((yearLevel) => {
 				const moodScores = yearLevel.mood_scores; // get the mood scores for this year level
 
-				if (moodScores.length > 0) { // if there are mood scores for this year level
+				if (moodScores.length > 0) {
+					// if there are mood scores for this year level
 
 					// get the total mood score for this year level
 					const totalMoodScore = moodScores.reduce((sum, score) => sum + parseInt(score), 0);
@@ -973,7 +1057,8 @@
 					// get the average mood score for this year level
 					const avgMoodScore = totalMoodScore / moodScores.length;
 
-					if (avgMoodScore < 0) { // if average mood score is negative
+					if (avgMoodScore < 0) {
+						// if average mood score is negative
 
 						// return an object with the average mood score as the value
 						// and the position of the label to the right of the bar
@@ -985,10 +1070,11 @@
 					return null; // if there are no mood scores for this year level, return null
 				}
 			});
-			
+
 			// map over the yearLevelData array and get the year level labels
 			yearLvlYData = yearLevelData?.map((yearLevel) => {
-				if (typeof yearLevel.yearLevel === 'number') { // if year level is a number
+				if (typeof yearLevel.yearLevel === 'number') {
+					// if year level is a number
 					return yearLvl[yearLevel.yearLevel]; // get the year level label from the yearLvl object
 				} else {
 					// if year level is not a number, remove the ' Level' from the string
@@ -999,19 +1085,16 @@
 			// reduce the dataType object to an array of objects
 			// where each object represents a reason and its mood scores
 			const reasonData = dataType?.reduce((acc, entry) => {
-				
 				// get the reason and mood scores from the current entry
 				const { reason_score, mood_score } = entry;
 
 				// find the reason in the accumulator
 				const existingReason = acc.find((item) => item.reason_score === reason_score);
 
-				if (existingReason) { 
-					
+				if (existingReason) {
 					// if the reason exists already, push the mood score to its array
 					existingReason.mood_scores.push(mood_score);
 				} else {
-
 					// if not, get the reason label from the reason object
 					// and push a new object for it to the accumulator
 					// since this is the first entry for this reason
@@ -1026,8 +1109,9 @@
 				// get the mood scores for this reason
 				const moodScores = reason.mood_scores;
 
-				if (moodScores.length > 0) { // if there are mood scores for this reason,
-					
+				if (moodScores.length > 0) {
+					// if there are mood scores for this reason,
+
 					// get the total mood score for this reason
 					// and get the average mood score for this reason
 					const totalMoodScore = moodScores.reduce((sum, score) => sum + parseInt(score), 0);
@@ -1035,7 +1119,6 @@
 
 					// if average mood score is negative,
 					if (avgMoodScore < 0) {
-
 						// return an object with the average mood score as the value
 						// and the position of the label to the right of the bar
 						return { value: avgMoodScore, label: { position: 'right' } };
@@ -1075,13 +1158,19 @@
 		};
 
 		// MARK TYPES FOR SIMPLE BAR CHART
-		if(selectedReasonMarkType === 'average') { sbcMarkType = 'average' }
-		else if(selectedReasonMarkType === 'min') { sbcMarkType = 'min' }
-		else if(selectedReasonMarkType === 'max') { sbcMarkType = 'max' }
+		if (selectedReasonMarkType === 'average') {
+			sbcMarkType = 'average';
+		} else if (selectedReasonMarkType === 'min') {
+			sbcMarkType = 'min';
+		} else if (selectedReasonMarkType === 'max') {
+			sbcMarkType = 'max';
+		}
 
 		// SIMPLE BAR CHART - # OF MOOD ENTRIES PER WEEKDAY
 		// filter the dataType array to only include entries with the selected mood score
-		let filteredSelectedMoodData = dataType?.filter(data => data.mood_score === selectedMoodScore);
+		let filteredSelectedMoodData = dataType?.filter(
+			(data) => data.mood_score === selectedMoodScore
+		);
 
 		// group the filtered data by the day of the week when each entry was created
 		const groupedDays = _.groupBy(filteredSelectedMoodData, (data) => {
@@ -1090,10 +1179,10 @@
 		});
 
 		// count the number of entries for each day of the week
-		const entriesByWeekday = _.mapValues(groupedDays, data => data.length);
+		const entriesByWeekday = _.mapValues(groupedDays, (data) => data.length);
 
 		// map the day numbers to their respective names
-		xMoodWeek = _.keys(entriesByWeekday).map(dayNumber => daysShort[dayNumber]);
+		xMoodWeek = _.keys(entriesByWeekday).map((dayNumber) => daysShort[dayNumber]);
 
 		// store the counts of entries for each day of the week
 		yMoodWeekEntry = _.values(entriesByWeekday);
@@ -1105,12 +1194,15 @@
 		const reasonCounts = _.countBy(filteredSelectedMoodData, 'reason_score');
 
 		// calculate the percentage of total entries that each reason score represents
-		const reasonPercentages = _.mapValues(reasonCounts, count => (count / filteredSelectedMoodData.length) * 100);
+		const reasonPercentages = _.mapValues(
+			reasonCounts,
+			(count) => (count / filteredSelectedMoodData.length) * 100
+		);
 
 		// get the percentage values and reason labels
 		yReasonPercentage = _.values(reasonPercentages);
-		xReason = Object.keys(reasonPercentages).map(key => {
-			return Object.keys(reason).find(label => reason[label] == key);
+		xReason = Object.keys(reasonPercentages).map((key) => {
+			return Object.keys(reason).find((label) => reason[label] == key);
 		});
 	}
 
@@ -1118,27 +1210,25 @@
 		recentStudent = studentMoodData?.slice(-1)[0]?.student_id; // for an info card
 	}
 
-	$: if(importExportModalState){
+	$: if (importExportModalState) {
 		let keys = Object.keys(dataType[0]);
 		keys[keys.indexOf('mood_score')] = 'mood';
 		keys[keys.indexOf('reason_score')] = 'reason';
-		keys.splice(keys.indexOf('created_at'), 1, 'date', 'time');
+		keys[keys.indexOf('created_at')] = 'datetime';
 
-		let values = dataType?.map(obj => {
-			let newObj = {...obj};
-			
-			newObj.mood = Object.keys(mood).find(key => mood[key] === Number(obj.mood_score));
-			newObj.reason = Object.keys(reason).find(key => reason[key] === Number(obj.reason_score));
-		
-			let createdAt = new Date(obj.created_at);
-			newObj.date = createdAt.toISOString().split('T')[0];
-			newObj.time = createdAt.toTimeString().split(' ')[0]; 
-			
+		let values = dataType?.map((obj) => {
+			let newObj = { ...obj };
+
+			newObj.mood = Object.keys(mood).find((key) => mood[key] === Number(obj.mood_score));
+			newObj.reason = Object.keys(reason).find((key) => reason[key] === Number(obj.reason_score));
+
+			newObj.datetime = displayTime(obj.created_at);
+
 			delete newObj.created_at;
-			delete newObj.mood_score; 
+			delete newObj.mood_score;
 			delete newObj.reason_score;
 
-			if(newObj.created_by == null) newObj.created_by = 'N/A';
+			if (newObj.created_by == null) newObj.created_by = 'KIOSK';
 
 			let orderedObj = {};
 
@@ -1150,13 +1240,13 @@
 			return Object.values(newObj);
 		});
 
-		exportMoodsData.update(() => [keys, ...values]); 
+		exportMoodsData.update(() => [keys, ...values]);
 	}
 
-	$: if(typeof window !== 'undefined'){
+	$: if (typeof window !== 'undefined') {
 		if (tableRef && $focusTable) {
 			window?.scrollTo(0, tableRef?.offsetTop);
-			focusTable?.update((value) => value = false);
+			focusTable?.update((value) => (value = false));
 		}
 	}
 </script>
@@ -1167,26 +1257,58 @@
 
 <!-- Student/Anonymous/Guest Floating Toggle Button -->
 {#if studentMoodData?.length > 0 || anonMoodData?.length > 0}
-	<Tooltip placement="left" class="fixed z-50 overflow-hidden" triggeredBy="#switchData" on:hover={(e) => e.preventDefault()}>
+	<Tooltip
+		placement="left"
+		class="fixed z-50 overflow-hidden"
+		triggeredBy="#switchData"
+		on:hover={(e) => e.preventDefault()}
+	>
 		Toggle between student, anonymous, and guest mood data
 	</Tooltip>
 
-	<div id="switchData" class="flex justify-evenly space-x-2 bg-slate-900 p-2 rounded-full w-fit fixed right-4 bottom-4 z-20">
-		<button class={switchMoodData.student ? toggleBtnClass.active : toggleBtnClass.inactive}
-			on:click={() => {switchMoodData = {student: true, anon: false, guest: false};}}>
-			<p class={switchMoodData.student ? 'text-white font-semibold tracking-widest' : 'text-slate-500 tracking-widest'}>
+	<div
+		id="switchData"
+		class="flex justify-evenly space-x-2 bg-slate-900 p-2 rounded-full w-fit fixed right-4 bottom-4 z-20"
+	>
+		<button
+			class={switchMoodData.student ? toggleBtnClass.active : toggleBtnClass.inactive}
+			on:click={() => {
+				switchMoodData = { student: true, anon: false, guest: false };
+			}}
+		>
+			<p
+				class={switchMoodData.student
+					? 'text-white font-semibold tracking-widest'
+					: 'text-slate-500 tracking-widest'}
+			>
 				STUDENT
 			</p>
 		</button>
-		<button class={switchMoodData.anon ? toggleBtnClass.active : toggleBtnClass.inactive}
-			on:click={() => {switchMoodData = {student: false, anon: true, guest: false};}}>
-			<p class={switchMoodData.anon ? 'text-white font-semibold tracking-widest' : 'text-slate-500 tracking-widest'}>
+		<button
+			class={switchMoodData.anon ? toggleBtnClass.active : toggleBtnClass.inactive}
+			on:click={() => {
+				switchMoodData = { student: false, anon: true, guest: false };
+			}}
+		>
+			<p
+				class={switchMoodData.anon
+					? 'text-white font-semibold tracking-widest'
+					: 'text-slate-500 tracking-widest'}
+			>
 				ANON
 			</p>
 		</button>
-		<button class={switchMoodData.guest ? toggleBtnClass.active : toggleBtnClass.inactive}
-			on:click={() => {switchMoodData = {student: false, anon: false, guest: true};}}>
-			<p class={switchMoodData.guest ? 'text-white font-semibold tracking-widest' : 'text-slate-500 tracking-widest'}>
+		<button
+			class={switchMoodData.guest ? toggleBtnClass.active : toggleBtnClass.inactive}
+			on:click={() => {
+				switchMoodData = { student: false, anon: false, guest: true };
+			}}
+		>
+			<p
+				class={switchMoodData.guest
+					? 'text-white font-semibold tracking-widest'
+					: 'text-slate-500 tracking-widest'}
+			>
 				GUEST
 			</p>
 		</button>
@@ -1202,30 +1324,58 @@
 		<CardInfo purpose="" title={infoCardTitle} bind:data={topMoodReason} />
 		<CardInfo purpose="" title="Number of Entries:" bind:data={dataType.length} />
 
-		<Tooltip triggeredBy="#importExport" placement="left" on:hover={(e) => e.preventDefault()} class="z-50 relative">Import/Export Mood Data</Tooltip>
-		<Tooltip triggeredBy="#filterCharts" placement="left" on:hover={(e) => e.preventDefault()} class="z-50 relative">Filter Charts</Tooltip>
+		<Tooltip
+			triggeredBy="#importExport"
+			placement="left"
+			on:hover={(e) => e.preventDefault()}
+			class="z-50 relative">Import/Export Mood Data</Tooltip
+		>
+		<Tooltip
+			triggeredBy="#filterCharts"
+			placement="left"
+			on:hover={(e) => e.preventDefault()}
+			class="z-50 relative">Filter Charts</Tooltip
+		>
 
-		<Button id="importExport" class="w-full rounded-md flex flex-1 gap-2" color="green" shadow on:click={() => importExportModalState = true}>
+		<Button
+			id="importExport"
+			class="w-full rounded-md flex flex-1 gap-2"
+			color="green"
+			shadow
+			on:click={() => (importExportModalState = true)}
+		>
 			<FileImportSolid tabindex="-1" class="text-white focus:outline-none" />
 		</Button>
 
-		<Button id="filterCharts" class="w-full rounded-md flex flex-1 gap-2" shadow on:click={() => chartFilterModalState = true}>
+		<Button
+			id="filterCharts"
+			class="w-full rounded-md flex flex-1 gap-2"
+			shadow
+			on:click={() => (chartFilterModalState = true)}
+		>
 			<AdjustmentsVerticalSolid tabindex="-1" class="focus:outline-none" />
 		</Button>
 	</div>
-	
+
 	<!--  -->
 	<div class="flex flex-row flex-wrap gap-4">
-		<div id="overallMoodFreqHBC" class="flex p-4 pt-5 bg-white rounded drop-shadow-md hover:ring-1 flex-wrap justify-center pl-6 w-full flex-1">
+		<div
+			id="overallMoodFreqHBC"
+			class="flex p-4 pt-5 bg-white rounded drop-shadow-md hover:ring-1 flex-wrap justify-center pl-6 w-full flex-1"
+		>
 			{#if dataType?.length == 0}
-				<div class="flex flex-col justify-center items-center space-y-5" style="width: 225px; min-width: 100%; height:350px;">
+				<div
+					class="flex flex-col justify-center items-center space-y-5"
+					style="width: 225px; min-width: 100%; height:350px;"
+				>
 					<RocketOutline class="h-20 w-20" />
 					<p class="text-sm text-slate-500">Data currently <strong>unavailable</strong>.</p>
 				</div>
 			{:else}
 				<HorizontalMoodBarChart
 					title="Mood Frequency"
-					xAxisName="Frequency" yAxisName=""
+					xAxisName="Frequency"
+					yAxisName=""
 					bind:xData={xDataMBC}
 					bind:yData={yDataMBC}
 					elementID="dashboardHBC"
@@ -1233,39 +1383,57 @@
 				/>
 			{/if}
 		</div>
-		
-		<div id="lineChartMood" class="flex flex-1 p-4 w-full bg-white rounded drop-shadow-md hover:ring-1 flex-wrap justify-center">
+
+		<div
+			id="lineChartMood"
+			class="flex flex-1 p-4 w-full bg-white rounded drop-shadow-md hover:ring-1 flex-wrap justify-center"
+		>
 			<div class="flex flex-col space-y-3">
 				{#if dataType?.length > 0}
-					<ButtonGroup class="inline-flex rounded-lg shadow-sm self-center flex-wrap justify-center">
-						<Button class="sm:text-xs"
+					<ButtonGroup
+						class="inline-flex rounded-lg shadow-sm self-center flex-wrap justify-center"
+					>
+						<Button
+							class="sm:text-xs"
 							disabled={dataType.length == 0}
 							color={lcBtnColors.today}
-							on:click={() => selectLineChart('today')}>
+							on:click={() => selectLineChart('today')}
+						>
 							Today
 						</Button>
-						<Button class="sm:text-xs" id="weeklySLC"
+						<Button
+							class="sm:text-xs"
+							id="weeklySLC"
 							disabled={dataType.length == 0}
 							color={lcBtnColors.weekly}
-							on:click={() => selectLineChart('weekly')}>
+							on:click={() => selectLineChart('weekly')}
+						>
 							Weekly
 						</Button>
-						<Button class="sm:text-xs" id="monthlySLC"
+						<Button
+							class="sm:text-xs"
+							id="monthlySLC"
 							disabled={dataType.length == 0}
 							color={lcBtnColors.monthly}
-							on:click={() => selectLineChart('monthly')}>
+							on:click={() => selectLineChart('monthly')}
+						>
 							Monthly
 						</Button>
-						<Button class="sm:text-xs" id="yearlySLC"
+						<Button
+							class="sm:text-xs"
+							id="yearlySLC"
 							disabled={dataType.length == 0}
 							color={lcBtnColors.yearly}
-							on:click={() => selectLineChart('yearly')}>
+							on:click={() => selectLineChart('yearly')}
+						>
 							Yearly
 						</Button>
-						<Button class="sm:text-xs"
+						<Button
+							class="sm:text-xs"
 							disabled={dataType.length == 0}
 							color={lcBtnColors.overall}
-							on:click={() => selectLineChart('overall')}>
+							on:click={() => selectLineChart('overall')}
+						>
 							Overall
 						</Button>
 					</ButtonGroup>
@@ -1306,7 +1474,10 @@
 						/>
 					{/if}
 				{:else}
-					<div class="flex flex-col justify-center items-center space-y-5" style="width: 400px; min-width: 100%; height:300px;">
+					<div
+						class="flex flex-col justify-center items-center space-y-5"
+						style="width: 400px; min-width: 100%; height:300px;"
+					>
 						<RocketOutline class="h-20 w-20" />
 						<p class="text-sm text-slate-500">Data currently <strong>unavailable</strong>.</p>
 					</div>
@@ -1314,24 +1485,40 @@
 			</div>
 		</div>
 
-		<div id="moodAvgCourseYrReason" class="flex flex-col flex-1 p-4 w-full bg-white rounded items-center drop-shadow-md hover:ring-1">
+		<div
+			id="moodAvgCourseYrReason"
+			class="flex flex-col flex-1 p-4 w-full bg-white rounded items-center drop-shadow-md hover:ring-1"
+		>
 			{#if dataType?.length > 0}
-				
 				{#if switchMoodData.guest}
-					<Button class="sm:text-xs" color={nhbcBtnColors.reason} on:click={() => selectNHBarChart('reason')}>
+					<Button
+						class="sm:text-xs"
+						color={nhbcBtnColors.reason}
+						on:click={() => selectNHBarChart('reason')}
+					>
 						Reason
 					</Button>
 				{:else}
 					<ButtonGroup class="self-center">
-						<Button class="sm:text-xs" color={nhbcBtnColors.course} on:click={() => selectNHBarChart('course')}>
+						<Button
+							class="sm:text-xs"
+							color={nhbcBtnColors.course}
+							on:click={() => selectNHBarChart('course')}
+						>
 							Course
 						</Button>
-						<Button class="sm:text-xs"
+						<Button
+							class="sm:text-xs"
 							color={nhbcBtnColors.year_level}
-							on:click={() => selectNHBarChart('year_level')}>
+							on:click={() => selectNHBarChart('year_level')}
+						>
 							Year Level
 						</Button>
-						<Button class="sm:text-xs" color={nhbcBtnColors.reason} on:click={() => selectNHBarChart('reason')}>
+						<Button
+							class="sm:text-xs"
+							color={nhbcBtnColors.reason}
+							on:click={() => selectNHBarChart('reason')}
+						>
 							Reason
 						</Button>
 					</ButtonGroup>
@@ -1361,40 +1548,63 @@
 					{/if}
 				</div>
 			{:else}
-				<div class="flex flex-col justify-center items-center space-y-5" style="width: 350px; min-width: 100%; height:300px;">
+				<div
+					class="flex flex-col justify-center items-center space-y-5"
+					style="width: 350px; min-width: 100%; height:300px;"
+				>
 					<RocketOutline class="h-20 w-20" />
 					<p class="text-sm text-slate-500">Data currently <strong>unavailable</strong>.</p>
 				</div>
 			{/if}
 		</div>
-		
-		<div id="reasonFreqBC" class="flex flex-1 p-4 justify-center w-full bg-white rounded drop-shadow-md hover:ring-1">
+
+		<div
+			id="reasonFreqBC"
+			class="flex flex-1 p-4 justify-center w-full bg-white rounded drop-shadow-md hover:ring-1"
+		>
 			<div class="flex flex-col space-y-3">
 				{#if dataType?.length > 0}
-				<ButtonGroup class="self-center">
-					<Button class="sm:text-xs" color={sbcBtnColors.average} 
-						on:click={() => selectReasonMarkType('average')}>
-						Average
-					</Button>
-					<Button class="sm:text-xs" color={sbcBtnColors.max}
-						on:click={() => selectReasonMarkType('max')}>
-						Max
-					</Button>
-					<Button class="sm:text-xs" color={sbcBtnColors.min} 
-						on:click={() => selectReasonMarkType('min')}>
-						Min
-					</Button>
-				</ButtonGroup>
-				<SimpleBarChart
-						xData={xDataSBC} xType="category" xName="Reason"
-						yData={yDataSBC} yType="value" yName="Frequency"  yAxisRotate="90"
+					<ButtonGroup class="self-center">
+						<Button
+							class="sm:text-xs"
+							color={sbcBtnColors.average}
+							on:click={() => selectReasonMarkType('average')}
+						>
+							Average
+						</Button>
+						<Button
+							class="sm:text-xs"
+							color={sbcBtnColors.max}
+							on:click={() => selectReasonMarkType('max')}
+						>
+							Max
+						</Button>
+						<Button
+							class="sm:text-xs"
+							color={sbcBtnColors.min}
+							on:click={() => selectReasonMarkType('min')}
+						>
+							Min
+						</Button>
+					</ButtonGroup>
+					<SimpleBarChart
+						xData={xDataSBC}
+						xType="category"
+						xName="Reason"
+						yData={yDataSBC}
+						yType="value"
+						yName="Frequency"
+						yAxisRotate="90"
 						title="Reason Frequency"
 						markType={sbcMarkType}
 						elementID="reasonSBC"
 						style="width: 350px; min-width: 100%; height:300px;"
 					/>
 				{:else}
-					<div class="flex flex-col justify-center items-center space-y-5" style="width: 350px; min-width: 100%; height:300px;">
+					<div
+						class="flex flex-col justify-center items-center space-y-5"
+						style="width: 350px; min-width: 100%; height:300px;"
+					>
 						<RocketOutline class="h-20 w-20" />
 						<p class="text-sm text-slate-500">Data currently <strong>unavailable</strong>.</p>
 					</div>
@@ -1402,23 +1612,41 @@
 			</div>
 		</div>
 
-		<div id="moodLoginHrsHistogram" class="flex flex-1 p-4 w-full bg-white rounded justify-center items-center drop-shadow-md hover:ring-1">
+		<div
+			id="moodLoginHrsHistogram"
+			class="flex flex-1 p-4 w-full bg-white rounded justify-center items-center drop-shadow-md hover:ring-1"
+		>
 			{#if dataType?.length > 0}
-				<Histogram data={dataType} title="Mood Login Hours (24-hour)"
-					elementID="LoginHrsHistogram" 
+				<Histogram
+					data={dataType}
+					title="Mood Login Hours (24-hour)"
+					elementID="LoginHrsHistogram"
 					style="width: 300px; min-width: 100%; height:300px;"
 				/>
 			{:else}
-				<div class="flex flex-col justify-center items-center space-y-5" style="width: 300px; min-width: 100%; height:300px;">
+				<div
+					class="flex flex-col justify-center items-center space-y-5"
+					style="width: 300px; min-width: 100%; height:300px;"
+				>
 					<RocketOutline class="h-20 w-20" />
 					<p class="text-sm text-slate-500">Data currently <strong>unavailable</strong>.</p>
 				</div>
 			{/if}
 		</div>
 
-		<div id="low-moods" bind:this={tableRef} class="flex flex-col flex-1 justify-start bg-white rounded !p-4 drop-shadow-md w-full hover:ring-1 items-center flex-wrap space-y-4">
-			<p class="text-center my-3 break-words text-sm font-normal text-gray-500 dark:text-gray-400">(Students with low mood entries for <span class="font-semibold">atleast 4 days</span>)</p>
-			<Table striped divClass="relative overflow-x-auto shadow-md" class="table-auto overflow-x-auto min-w-full">
+		<div
+			id="low-moods"
+			bind:this={tableRef}
+			class="flex flex-col flex-1 justify-start bg-white rounded !p-4 drop-shadow-md w-full hover:ring-1 items-center flex-wrap space-y-4"
+		>
+			<p class="text-center my-3 break-words text-sm font-normal text-gray-500 dark:text-gray-400">
+				(Students with low mood entries for <span class="font-semibold">atleast 4 days</span>)
+			</p>
+			<Table
+				striped
+				divClass="relative overflow-x-auto shadow-md"
+				class="table-auto overflow-x-auto min-w-full"
+			>
 				<TableHead class="bg-zinc-100 border border-t border-zinc-300 top-0 sticky text-center">
 					<TableHeadCell>ID #</TableHeadCell>
 					<TableHeadCell>Date</TableHeadCell>
@@ -1438,8 +1666,11 @@
 							{#each student.streaks as streak}
 								<TableBodyRow class="text-center">
 									<TableBodyCell class="underline">
-										<a class="hover:underline" href="/students/mood-analytics?search={student.studentId}"
-											rel="noopener noreferrer">
+										<a
+											class="hover:underline"
+											href="/students/mood-analytics?search={student.studentId}"
+											rel="noopener noreferrer"
+										>
 											{student.studentId}
 										</a>
 									</TableBodyCell>
@@ -1447,16 +1678,14 @@
 										{streak.startDate} - {streak.endDate}
 									</TableBodyCell>
 									<TableBodyCell class="text-center">
-										{
-											Object.keys(mood).find(
-												(key) =>
-													mood[key] ===
-													Math.round(
-														streak.moodScores.reduce((accum, elem) => accum + parseInt(elem), 0) /
+										{Object.keys(mood).find(
+											(key) =>
+												mood[key] ===
+												Math.round(
+													streak.moodScores.reduce((accum, elem) => accum + parseInt(elem), 0) /
 														streak.moodScores.length
 												)
-											)
-										}
+										)}
 									</TableBodyCell>
 									<TableBodyCell class="text-center">
 										{(() => {
@@ -1495,7 +1724,11 @@
 			{#if dataType.length > 0}
 				<div class="flex flex-col justify-evenly space-y-4">
 					<div class="flex items-center justify-end mr-1.5 space-x-2">
-						<Checkbox class="cursor-pointer mr-0" bind:value={lowMoodsOnly} on:change={() => lowMoodsOnly = !lowMoodsOnly} />
+						<Checkbox
+							class="cursor-pointer mr-0"
+							bind:value={lowMoodsOnly}
+							on:change={() => (lowMoodsOnly = !lowMoodsOnly)}
+						/>
 						<p class="text-sm font-normal text-gray-500 dark:text-gray-400">Low Moods Only</p>
 					</div>
 					<HeatmapChart
@@ -1506,7 +1739,10 @@
 					/>
 				</div>
 			{:else}
-				<div class="flex flex-col justify-center items-center space-y-5" style="width: 500px; min-width: 100%; height:325px;">
+				<div
+					class="flex flex-col justify-center items-center space-y-5"
+					style="width: 500px; min-width: 100%; height:325px;"
+				>
 					<RocketOutline class="h-20 w-20" />
 					<p class="text-sm text-slate-500">Data currently <strong>unavailable</strong>.</p>
 				</div>
@@ -1523,7 +1759,10 @@
 					style="width: 650px; min-width: 100%; height:360px;"
 				/>
 			{:else}
-				<div class="flex flex-col justify-center items-center space-y-5" style="width: 650px; min-width: 100%; height:360px;">
+				<div
+					class="flex flex-col justify-center items-center space-y-5"
+					style="width: 650px; min-width: 100%; height:360px;"
+				>
 					<RocketOutline class="h-20 w-20" />
 					<p class="text-sm text-slate-500">Data currently <strong>unavailable</strong>.</p>
 				</div>
@@ -1536,21 +1775,39 @@
 					<div class="flex flex-row justify-between space-x-3 mt-4">
 						<div class="flex flex-col justify-start items-center mt-2">
 							<p class="font-semibold self-start">Mood-Reason Calendar</p>
-							<p class="text-xs">(Please select the calendar year, mood and the associated reason.)</p>
+							<p class="text-xs">
+								(Please select the calendar year, mood and the associated reason.)
+							</p>
 						</div>
 						<div class="flex flex-row space-x-3">
-							<Select placeholder="Year" class="font-normal h-11 bg-white" items={calendarYearChoices} bind:value={selectedCalendarYear} />
-							<Select placeholder="Mood" class="font-normal h-11 bg-white" items={moodChoices} bind:value={selectedMoodCalendar} />
-							<Select placeholder="Reason" class="font-normal h-11 bg-white" items={reasonChoices} bind:value={selectedReasonCalendar} />
+							<Select
+								placeholder="Year"
+								class="font-normal h-11 bg-white"
+								items={calendarYearChoices}
+								bind:value={selectedCalendarYear}
+							/>
+							<Select
+								placeholder="Mood"
+								class="font-normal h-11 bg-white"
+								items={moodChoices}
+								bind:value={selectedMoodCalendar}
+							/>
+							<Select
+								placeholder="Reason"
+								class="font-normal h-11 bg-white"
+								items={reasonChoices}
+								bind:value={selectedReasonCalendar}
+							/>
 						</div>
 					</div>
 					<div class="items-center">
-						<CalendarChart 
-							data={dataType} seriesName="Mood-Reason Calendar"
+						<CalendarChart
+							data={dataType}
+							seriesName="Mood-Reason Calendar"
 							bind:calendarYear={selectedCalendarYear}
-							bind:reasonType={selectedReasonCalendar} 
+							bind:reasonType={selectedReasonCalendar}
 							bind:moodType={selectedMoodCalendar}
-							elementID="moodCalendarChart" 
+							elementID="moodCalendarChart"
 							style="width: 1200px; min-width: 100%; height:300px;"
 						/>
 					</div>
@@ -1562,62 +1819,59 @@
 				{/if}
 			</div>
 		</div>
-	</div> 
+	</div>
 </div>
 
-<Modal class="flex relative max-w-fit max-h-full" title="Toggle a chart" bind:open={chartFilterModalState}>
+<Modal
+	class="flex relative max-w-fit max-h-full"
+	title="Toggle a chart"
+	bind:open={chartFilterModalState}
+>
 	<div class="flex flex-col gap-3">
-		<!-- 
-			NOTE: The `href` attribute in this case is just used to provide a fallback for 
-			browsers that dont support JavaScript or in case JavaScript fails to load. 
-			So even without JS, clicking the link will still take you to the right section of the page.
-		-->
-		<!-- 
-			The value attribute of an HTML checkbox specifies the 
-			value to be sent to the server when the form is submitted and the checkbox is checked.
-			The checked attribute indicates whether the checkbox is checked by default when the page loads. 
-			If the checked attribute is present, the checkbox is checked; if it’s absent, the checkbox is unchecked.
-		 -->
-		<p class="text-sm">Navigate to: </p>
+		<p class="text-sm">Navigate to:</p>
 		<a href="#overallMoodFreqHBC" on:click={scrollIntoView} class="text-gray-700">
 			<div class="flex gap-3 items-center">
-				<ChartMixedOutline class="focus:outline-none h-5 w-5 text-gray-700" /> 
+				<ChartMixedOutline class="focus:outline-none h-5 w-5 text-gray-700" />
 				<p class="text-sm">Overall Mood Frequency Chart</p>
 			</div>
 		</a>
 		<a href="#lineChartMood" on:click={scrollIntoView} class="text-gray-700">
 			<div class="flex gap-3 items-center">
-				<ChartOutline class="focus:outline-none h-5 w-5 text-gray-700" /> 
+				<ChartOutline class="focus:outline-none h-5 w-5 text-gray-700" />
 				<p class="text-sm">Mood Line Charts</p>
 			</div>
 		</a>
 		<a href="#moodAvgCourseYrReason" on:click={scrollIntoView} class="text-gray-700">
 			<div class="flex gap-3 items-center">
-				<ChartMixedOutline class="focus:outline-none h-5 w-5 text-gray-700" /> 
+				<ChartMixedOutline class="focus:outline-none h-5 w-5 text-gray-700" />
 				<p class="text-sm">Mood Averages (Course/Year Level/Reason)</p>
 			</div>
 		</a>
 		<a href="#reasonFreqBC" on:click={scrollIntoView} class="text-gray-700">
 			<div class="flex gap-3 items-center">
-				<ChartMixedOutline class="focus:outline-none h-5 w-5 text-gray-700" /> 
+				<ChartMixedOutline class="focus:outline-none h-5 w-5 text-gray-700" />
 				<p class="text-sm">Associated Reason Frequency Chart</p>
 			</div>
 		</a>
 		<a href="#moodLoginHrsHistogram" on:click={scrollIntoView} class="text-gray-700">
 			<div class="flex gap-3 items-center">
-				<ChartMixedOutline class="focus:outline-none h-5 w-5 text-gray-700" /> 
+				<ChartMixedOutline class="focus:outline-none h-5 w-5 text-gray-700" />
 				<p class="text-sm">Mood Login Hours (in 24-hour format)</p>
 			</div>
 		</a>
 		<a href="#low-moods" on:click={scrollIntoView} class="text-gray-700">
 			<div class="flex gap-3 items-center">
-				<TableColumnOutline class="focus:outline-none h-5 w-5 text-gray-700" /> 
+				<TableColumnOutline class="focus:outline-none h-5 w-5 text-gray-700" />
 				<p class="text-sm">Table of Students with Consistent Low Moods</p>
 			</div>
 		</a>
 
 		<p class="mt-2 text-sm">Additional charts:</p>
-		<Checkbox id="heatmap" bind:checked={heatmap} on:change={(event) => filterChart(heatmap, event)}>
+		<Checkbox
+			id="heatmap"
+			bind:checked={heatmap}
+			on:change={(event) => filterChart(heatmap, event)}
+		>
 			<a href="#moodFreqHeatmap" on:click={scrollIntoView}>
 				<div class="flex gap-3 items-center">
 					<p class="text-sm">Mood Frequency by Day and Hour Chart</p>
@@ -1631,7 +1885,11 @@
 				</div>
 			</a>
 		</Checkbox>
-		<Checkbox id="moodReasonCalendarChart" bind:checked={moodReasonCalendarChart} on:change={(event) => filterChart(moodReasonCalendarChart, event)}>
+		<Checkbox
+			id="moodReasonCalendarChart"
+			bind:checked={moodReasonCalendarChart}
+			on:change={(event) => filterChart(moodReasonCalendarChart, event)}
+		>
 			<a href="#moodCalendar" on:click={scrollIntoView}>
 				<div class="flex gap-3 items-center">
 					<p class="text-sm">Mood Calendar</p>
@@ -1646,8 +1904,14 @@
 		<TabItem open title="FORMAT FOR IMPORT">
 			<div class="flex flex-col gap-y-4">
 				<p class="text-sm text-black uppercase font-semibold">Student:</p>
-				<Table striped divClass="relative overflow-x-auto shadow-md" class="table-auto overflow-x-auto min-w-full">
-					<TableHead class="bg-zinc-100 border border-t border-zinc-300 top-0 sticky lowercase text-center">
+				<Table
+					striped
+					divClass="relative overflow-x-auto shadow-md"
+					class="table-auto overflow-x-auto min-w-full"
+				>
+					<TableHead
+						class="bg-zinc-100 border border-t border-zinc-300 top-0 sticky lowercase text-center"
+					>
 						<TableHeadCell>student_id</TableHeadCell>
 						<TableHeadCell>mood_id</TableHeadCell>
 						<TableHeadCell>reason_id</TableHeadCell>
@@ -1655,7 +1919,7 @@
 					</TableHead>
 					<TableBody tableBodyClass="divide-y bg-white">
 						<TableBodyRow class="border border-zinc-300 text-center">
-							<TableBodyCell>2020303123</TableBodyCell>        
+							<TableBodyCell>2020303123</TableBodyCell>
 							<TableBodyCell>1</TableBodyCell>
 							<TableBodyCell>4</TableBodyCell>
 							<TableBodyCell>2024-01-30 13:01:20</TableBodyCell>
@@ -1663,8 +1927,14 @@
 					</TableBody>
 				</Table>
 				<p class="text-sm text-black uppercase font-semibold">Anon:</p>
-				<Table striped divClass="relative overflow-x-auto shadow-md" class="table-auto overflow-x-auto min-w-full">
-					<TableHead class="bg-zinc-100 border border-t border-zinc-300 top-0 sticky lowercase text-center">
+				<Table
+					striped
+					divClass="relative overflow-x-auto shadow-md"
+					class="table-auto overflow-x-auto min-w-full"
+				>
+					<TableHead
+						class="bg-zinc-100 border border-t border-zinc-300 top-0 sticky lowercase text-center"
+					>
 						<TableHeadCell>mood_score</TableHeadCell>
 						<TableHeadCell>reason_score</TableHeadCell>
 						<TableHeadCell>course</TableHeadCell>
@@ -1682,8 +1952,14 @@
 					</TableBody>
 				</Table>
 				<p class="text-sm text-black uppercase font-semibold">Guest:</p>
-				<Table striped divClass="relative overflow-x-auto shadow-md" class="table-auto overflow-x-auto min-w-full">
-					<TableHead class="bg-zinc-100 border border-t border-zinc-300 top-0 sticky lowercase text-center">
+				<Table
+					striped
+					divClass="relative overflow-x-auto shadow-md"
+					class="table-auto overflow-x-auto min-w-full"
+				>
+					<TableHead
+						class="bg-zinc-100 border border-t border-zinc-300 top-0 sticky lowercase text-center"
+					>
 						<TableHeadCell>mood_score</TableHeadCell>
 						<TableHeadCell>reason_score</TableHeadCell>
 						<TableHeadCell>created_at</TableHeadCell>
@@ -1697,19 +1973,28 @@
 					</TableBody>
 				</Table>
 			</div>
-		</TabItem> 
+		</TabItem>
 
 		<TabItem title="IMPORT">
 			<Label for="with_helper" class="pb-2">Upload file (.xlsx file only):</Label>
 			<Fileupload class="w-full" id="with_helper" accept=".xlsx" on:change={handleImport} />
 			{#if importError}
-				<p class="mt-3 text-red-500 text-sm"><span class="font-semibold">ERROR: </span>{importError}</p>
+				<p class="mt-3 text-red-500 text-sm">
+					<span class="font-semibold">ERROR: </span>{importError}
+				</p>
 			{/if}
 		</TabItem>
 
-		<TabItem title={"EXPORT "+currentDataView.toUpperCase()+" MOOD DATA"} class="space-y-4 items-center">
-			<p class="text-sm text-black uppercase font-semibold mb-2">(data preview):</p>
-			<Table striped divClass="relative overflow-x-auto shadow-md" class="table-auto overflow-x-auto min-w-full">
+		<TabItem
+			title={'EXPORT ' + currentDataView.toUpperCase() + ' MOOD DATA'}
+			class="space-y-4 items-center"
+		>
+			<p class="text-sm text-black uppercase font-semibold mb-2">(preview):</p>
+			<Table
+				striped
+				divClass="relative overflow-x-auto shadow-md"
+				class="table-auto overflow-x-auto min-w-full"
+			>
 				{#if currentDataView == 'Student'}
 					<TableHead class="bg-zinc-100 border border-t border-zinc-300 top-0 sticky text-center">
 						<TableHeadCell>#</TableHeadCell>
@@ -1749,7 +2034,7 @@
 					{#if $exportMoodsData?.length === 0}
 						{#if currentDataView == 'Student'}
 							<TableBodyRow class="border border-zinc-300 text-center">
-								<TableBodyCell>No data</TableBodyCell>        
+								<TableBodyCell>No data</TableBodyCell>
 								<TableBodyCell>No data</TableBodyCell>
 								<TableBodyCell>No data</TableBodyCell>
 								<TableBodyCell>No data</TableBodyCell>
@@ -1763,7 +2048,7 @@
 							</TableBodyRow>
 						{:else if currentDataView == 'Anon'}
 							<TableBodyRow class="border border-zinc-300 text-center">
-								<TableBodyCell>No data</TableBodyCell>        
+								<TableBodyCell>No data</TableBodyCell>
 								<TableBodyCell>No data</TableBodyCell>
 								<TableBodyCell>No data</TableBodyCell>
 								<TableBodyCell>No data</TableBodyCell>
@@ -1774,7 +2059,7 @@
 							</TableBodyRow>
 						{:else if currentDataView == 'Guest'}
 							<TableBodyRow class="border border-zinc-300 text-center">
-								<TableBodyCell>No data</TableBodyCell>        
+								<TableBodyCell>No data</TableBodyCell>
 								<TableBodyCell>No data</TableBodyCell>
 								<TableBodyCell>No data</TableBodyCell>
 								<TableBodyCell>No data</TableBodyCell>
@@ -1782,7 +2067,7 @@
 							</TableBodyRow>
 						{/if}
 					{:else}
-						{#each $exportMoodsData?.slice(1,2) as entry}
+						{#each $exportMoodsData?.slice(1, 2) as entry}
 							<TableBodyRow class="border border-zinc-300 text-center">
 								{#each entry as row}
 									<TableBodyCell>{row}</TableBodyCell>
