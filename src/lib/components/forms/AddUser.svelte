@@ -16,7 +16,7 @@
 		<h3 class="font-bold text-slate-950 text-center text-lg my-3">Add New User</h3>
 		<form class="space-y-5" action="?/newUser" method="POST" use:enhance>
 			<FloatingLabelInput size="small" style="outlined" id="addName" name="addName" type="text"
-				label="Username" minlength="3" maxlength="10" required
+				label="Username" minlength="3" maxlength="23" required
 			/>
 			<FloatingLabelInput size="small" style="outlined" id="addEmail" name="addEmail" type="email" 
 				label="Email Address"
