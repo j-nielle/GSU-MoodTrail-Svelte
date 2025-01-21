@@ -1347,7 +1347,10 @@
 			shadow
 			on:click={() => (importExportModalState = true)}
 		>
-			<FileImportSolid tabindex="-1" class="text-white focus:outline-none" />
+			<span class="flex flex-row items-center gap-2">
+				<FileImportSolid tabindex="-1" class="text-white focus:outline-none" />
+				<span class="text-xs shrink-0">Export</span>
+			</span>
 		</Button>
 
 		<Button
@@ -1356,7 +1359,10 @@
 			shadow
 			on:click={() => (chartFilterModalState = true)}
 		>
-			<AdjustmentsVerticalSolid tabindex="-1" class="focus:outline-none" />
+			<span class="flex flex-row items-center gap-2">
+				<AdjustmentsVerticalSolid tabindex="-1" class="focus:outline-none" />
+				<span class="text-xs shrink-0">Filter</span>
+			</span>
 		</Button>
 	</div>
 
