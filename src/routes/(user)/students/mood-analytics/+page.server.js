@@ -53,8 +53,8 @@ export const actions = {
 
 		try {
 			const { user } = await getSession();
-			const created_by = user?.user_metadata.role; // user_metadata: { email_verified: true, role: 'admin', username: 'Admin' },
-		
+			const created_by = user?.user_metadata.role; 
+
 			const { error: insertError } = await supabase
 				.from('StudentMood')
 				.insert([

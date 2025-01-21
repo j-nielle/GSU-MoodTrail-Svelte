@@ -256,10 +256,8 @@
 		});
 	};
 
-	$: {
-		if (session) {
-			handleUserInfo();
-		}
+	$: if (session) {
+		handleUserInfo();
 	}
 
 	$: if (lowMoods) {
@@ -368,7 +366,7 @@
 								placement="top-right"
 								class="text-xs font-bold"
 							>
-								{pendingReqs.length ?? 0}
+								{pendingReqs && pendingReqs.length}
 							</Indicator>
 						</Button>
 					</label>
