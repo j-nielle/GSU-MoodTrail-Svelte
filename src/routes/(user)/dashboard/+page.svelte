@@ -20,7 +20,8 @@
 		Label,
 		Fileupload,
 		Tabs,
-		TabItem
+		TabItem,
+		Popover
 	} from 'flowbite-svelte';
 	import {
 		RocketOutline,
@@ -28,7 +29,9 @@
 		ChartMixedOutline,
 		ChartOutline,
 		TableColumnOutline,
-		FileImportSolid
+		FileImportSolid,
+		QuestionCircleSolid,
+		ChevronRightOutline
 	} from 'flowbite-svelte-icons';
 	import {
 		RadarChart,
@@ -1903,7 +1906,41 @@
 	<Tabs style="underline" contentClass="bg-white rounded-lg" divider={false}>
 		<TabItem open title="FORMAT FOR IMPORT">
 			<div class="flex flex-col gap-y-4">
-				<p class="text-sm text-black uppercase font-semibold">Student:</p>
+				<p class="text-sm text-black uppercase font-semibold inline-flex">
+					Student:<button id="b3">
+						<QuestionCircleSolid class="w-5 h-5 ms-1.5" />
+						<span class="sr-only">Show information</span>
+					</button>
+				</p>
+				<Popover
+					triggeredBy="#b3"
+					class="w-72 z-20 text-sm font-light text-gray-500 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400"
+					placement="right"
+				>
+					<div class="p-3 space-y-2">
+						<h3 class="font-semibold text-gray-900 dark:text-white">Mood Scores</h3>
+						<p class="text-xs">
+							Based on{' '}<a
+								href="https://diopd.org/pick-a-mood/"
+								class="text-primary-600 font-medium dark:text-primary-500 dark:hover:text-primary-600 hover:text-primary-700"
+							>
+								Pick A Mood
+							</a> pictorial scale.
+						</p>
+
+						<p class="text-xs">
+							Sad <span class="font-medium">(-4)</span> - Annoyed
+							<span class="font-medium">(-3)</span>
+							- Nervous <span class="font-medium">(-2)</span> - Bored
+							<span class="font-medium">(-1)</span>
+							- Neutral <span class="font-medium">(0)</span> - Calm
+							<span class="font-medium">(1)</span>
+							- Relaxed
+							<span class="font-medium">(2)</span> - Happy <span class="font-medium">(3)</span> -
+							Excited <span class="font-medium">(4)</span>
+						</p>
+					</div>
+				</Popover>
 				<Table
 					striped
 					divClass="relative overflow-x-auto shadow-md"
