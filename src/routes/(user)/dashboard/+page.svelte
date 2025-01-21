@@ -1369,7 +1369,6 @@
 	<!--  -->
 	<div class="flex flex-row flex-wrap gap-4">
 		<div
-			id="overallMoodFreqHBC"
 			class="flex p-4 pt-5 bg-white rounded drop-shadow-md hover:ring-1 flex-wrap justify-center pl-6 w-full flex-1"
 		>
 			{#if dataType?.length == 0}
@@ -1394,7 +1393,6 @@
 		</div>
 
 		<div
-			id="lineChartMood"
 			class="flex flex-1 p-4 w-full bg-white rounded drop-shadow-md hover:ring-1 flex-wrap justify-center"
 		>
 			<div class="flex flex-col space-y-3">
@@ -1412,7 +1410,6 @@
 						</Button>
 						<Button
 							class="sm:text-xs"
-							id="weeklySLC"
 							disabled={dataType.length == 0}
 							color={lcBtnColors.weekly}
 							on:click={() => selectLineChart('weekly')}
@@ -1421,7 +1418,6 @@
 						</Button>
 						<Button
 							class="sm:text-xs"
-							id="monthlySLC"
 							disabled={dataType.length == 0}
 							color={lcBtnColors.monthly}
 							on:click={() => selectLineChart('monthly')}
@@ -1430,7 +1426,6 @@
 						</Button>
 						<Button
 							class="sm:text-xs"
-							id="yearlySLC"
 							disabled={dataType.length == 0}
 							color={lcBtnColors.yearly}
 							on:click={() => selectLineChart('yearly')}
@@ -1495,7 +1490,6 @@
 		</div>
 
 		<div
-			id="moodAvgCourseYrReason"
 			class="flex flex-col flex-1 p-4 w-full bg-white rounded items-center drop-shadow-md hover:ring-1"
 		>
 			{#if dataType?.length > 0}
@@ -1567,10 +1561,7 @@
 			{/if}
 		</div>
 
-		<div
-			id="reasonFreqBC"
-			class="flex flex-1 p-4 justify-center w-full bg-white rounded drop-shadow-md hover:ring-1"
-		>
+		<div class="flex flex-1 p-4 justify-center w-full bg-white rounded drop-shadow-md hover:ring-1">
 			<div class="flex flex-col space-y-3">
 				{#if dataType?.length > 0}
 					<ButtonGroup class="self-center">
@@ -1622,7 +1613,6 @@
 		</div>
 
 		<div
-			id="moodLoginHrsHistogram"
 			class="flex flex-1 p-4 w-full bg-white rounded justify-center items-center drop-shadow-md hover:ring-1"
 		>
 			{#if dataType?.length > 0}
@@ -1644,7 +1634,6 @@
 		</div>
 
 		<div
-			id="low-moods"
 			bind:this={tableRef}
 			class="flex flex-col flex-1 justify-start bg-white rounded !p-4 drop-shadow-md w-full hover:ring-1 items-center flex-wrap space-y-4"
 		>
@@ -1837,45 +1826,7 @@
 	bind:open={chartFilterModalState}
 >
 	<div class="flex flex-col gap-3">
-		<p class="text-sm">Navigate to:</p>
-		<a href="#overallMoodFreqHBC" on:click={scrollIntoView} class="text-gray-700">
-			<div class="flex gap-3 items-center">
-				<ChartMixedOutline class="focus:outline-none h-5 w-5 text-gray-700" />
-				<p class="text-sm">Overall Mood Frequency Chart</p>
-			</div>
-		</a>
-		<a href="#lineChartMood" on:click={scrollIntoView} class="text-gray-700">
-			<div class="flex gap-3 items-center">
-				<ChartOutline class="focus:outline-none h-5 w-5 text-gray-700" />
-				<p class="text-sm">Mood Line Charts</p>
-			</div>
-		</a>
-		<a href="#moodAvgCourseYrReason" on:click={scrollIntoView} class="text-gray-700">
-			<div class="flex gap-3 items-center">
-				<ChartMixedOutline class="focus:outline-none h-5 w-5 text-gray-700" />
-				<p class="text-sm">Mood Averages (Course/Year Level/Reason)</p>
-			</div>
-		</a>
-		<a href="#reasonFreqBC" on:click={scrollIntoView} class="text-gray-700">
-			<div class="flex gap-3 items-center">
-				<ChartMixedOutline class="focus:outline-none h-5 w-5 text-gray-700" />
-				<p class="text-sm">Associated Reason Frequency Chart</p>
-			</div>
-		</a>
-		<a href="#moodLoginHrsHistogram" on:click={scrollIntoView} class="text-gray-700">
-			<div class="flex gap-3 items-center">
-				<ChartMixedOutline class="focus:outline-none h-5 w-5 text-gray-700" />
-				<p class="text-sm">Mood Login Hours (in 24-hour format)</p>
-			</div>
-		</a>
-		<a href="#low-moods" on:click={scrollIntoView} class="text-gray-700">
-			<div class="flex gap-3 items-center">
-				<TableColumnOutline class="focus:outline-none h-5 w-5 text-gray-700" />
-				<p class="text-sm">Table of Students with Consistent Low Moods</p>
-			</div>
-		</a>
-
-		<p class="mt-2 text-sm">Additional charts:</p>
+		<p class="text-sm">Additional charts:</p>
 		<Checkbox
 			id="heatmap"
 			bind:checked={heatmap}
@@ -1913,13 +1864,13 @@
 		<TabItem open title="FORMAT FOR IMPORT">
 			<div class="flex flex-col gap-y-4">
 				<p class="text-sm text-black uppercase font-semibold inline-flex">
-					Student:<button id="b3">
+					Student:<button id="showInfo">
 						<QuestionCircleSolid class="w-5 h-5 ms-1.5" />
 						<span class="sr-only">Show information</span>
 					</button>
 				</p>
 				<Popover
-					triggeredBy="#b3"
+					triggeredBy="#showInfo"
 					class="w-72 z-20 text-sm font-light text-gray-500 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400"
 					placement="right"
 				>
