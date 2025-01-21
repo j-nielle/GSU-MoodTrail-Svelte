@@ -100,6 +100,8 @@
 	let hasMoodEntries = false;
 	let entries = [];
 
+	$: searchTerm = $page?.url?.searchParams?.get('search');
+
 	$: selected = selectedCollege && selectedCourse && selectedYearLevel && selectedStudent;
 
 	onMount(() => {
@@ -126,20 +128,19 @@
 		};
 	});
 
-	$: {
-		searchTerm = $page?.url?.searchParams?.get('search');
+	$: if (selectedStudent) {
+		searchTerm = selectedStudent;
+	}
 
-		if (selectedStudent) {
-			searchTerm = selectedStudent;
-		}
-
-		hasEntry = studentMoodData?.find((student) => student.student_id == searchTerm);
+	$: if (searchTerm) {
+		hasEntry = studentMoodData?.findLast((student) => student.student_id == searchTerm);
 		hasMoodEntries = hasEntry ? true : false;
+
 		if (!hasEntry) {
-			result = students?.find((student) => student?.student_id == searchTerm);
+			result = { ...students?.find((student) => student?.student_id == searchTerm) };
 		} else {
-			result = hasEntry;
 			entries = studentMoodData?.filter((student) => student.student_id == searchTerm);
+			result = { ...hasEntry };
 		}
 		currentStudentID = result?.student_id;
 	}
@@ -230,7 +231,7 @@
 			leastFrequentMood = leastFrequentMoods.length > 1 ? 'A tie.' : leastFrequentMoods[0];
 		}
 
-		xDataMBC = sortedMoodsArr;
+		xDataMBC = Object.keys(moodCount);
 		yDataMBC = m_counts;
 
 		pieChartData = xDataMBC.map((label, index) => {
