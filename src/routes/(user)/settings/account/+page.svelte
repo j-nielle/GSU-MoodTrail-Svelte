@@ -13,6 +13,7 @@
 	export let form;
 
 	$: user = data.user;
+	$: role = user.user_metadata.role;
 	$: username = user?.user_metadata?.username;
 	$: id = user?.id;
 
@@ -71,7 +72,7 @@
 		<div class="flex flex-row justify-between space-x-4 items-center">
 			<div class="flex flex-col">
 				<p class="text-xs uppercase font-bold text-black">user role</p>
-				<p class="text-xs uppercase text-black">{user?.role}</p>
+				<p class="text-xs uppercase text-black">{role}</p>
 			</div>
 		</div>
 	</div>
