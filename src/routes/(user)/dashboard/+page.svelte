@@ -1246,6 +1246,8 @@
 		exportMoodsData.update(() => [keys, ...values]);
 	}
 
+	$: console.log($exportMoodsData)
+
 	$: if (typeof window !== 'undefined') {
 		if (tableRef && $focusTable) {
 			window?.scrollTo(0, tableRef?.offsetTop);
@@ -1999,8 +2001,7 @@
 						<TableHeadCell>College</TableHeadCell>
 						<TableHeadCell>Mood</TableHeadCell>
 						<TableHeadCell>Reason</TableHeadCell>
-						<TableHeadCell>Date</TableHeadCell>
-						<TableHeadCell>Time</TableHeadCell>
+						<TableHeadCell>Datetime</TableHeadCell>
 						<TableHeadCell>Created By</TableHeadCell>
 					</TableHead>
 				{:else if currentDataView == 'Anon'}
@@ -2008,8 +2009,7 @@
 						<TableHeadCell>#</TableHeadCell>
 						<TableHeadCell>Mood</TableHeadCell>
 						<TableHeadCell>Reason</TableHeadCell>
-						<TableHeadCell>Date</TableHeadCell>
-						<TableHeadCell>Time</TableHeadCell>
+						<TableHeadCell>Datetime</TableHeadCell>
 						<TableHeadCell>Course</TableHeadCell>
 						<TableHeadCell>Year Level</TableHeadCell>
 						<TableHeadCell>Created By</TableHeadCell>
@@ -2019,8 +2019,7 @@
 						<TableHeadCell>#</TableHeadCell>
 						<TableHeadCell>Mood</TableHeadCell>
 						<TableHeadCell>Reason</TableHeadCell>
-						<TableHeadCell>Date</TableHeadCell>
-						<TableHeadCell>Time</TableHeadCell>
+						<TableHeadCell>Datetime</TableHeadCell>
 						<TableHeadCell>Created By</TableHeadCell>
 					</TableHead>
 				{/if}
