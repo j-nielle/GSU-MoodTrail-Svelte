@@ -505,7 +505,8 @@
 				class="h-11 w-fit"
 				size="sm"
 				color="red"
-				on:click={() => {
+				on:click={async () => {
+					await goto('/students/mood-analytics');
 					searchTerm = '';
 					selectedCollege = '';
 					selectedCourse = '';
