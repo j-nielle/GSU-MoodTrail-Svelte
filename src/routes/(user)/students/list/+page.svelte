@@ -65,8 +65,8 @@
 
 	let studentToDelete;
 
-	$: if (students || searchTerm) {
-		handleFilterStudents();
+	$: {
+		handleFilterStudents(students, searchTerm, currentPage, limit);
 	}
 
 	const handleEvent = (eventType, payload) => {
@@ -107,7 +107,7 @@
 		});
 	};
 
-	const handleFilterStudents = () => {
+	const handleFilterStudents = (students, searchTerm, currentPage, limit) => {
 		filteredItems = students?.filter((req) => {
 			const idMatch = req.student_id.toString().includes(searchTerm);
 			const nameMatch = req.student_name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -119,20 +119,17 @@
 			return searchTerm !== '' ? idMatch || nameMatch || courseMatch || yearLevelMatch : true;
 		});
 
-		startIndex = (currentPage - 1) * limit; // Calculate the starting index for the current page.
-		endIndex = startIndex + limit; // Calculate the ending index for the current page.
-		maxPage = Math.ceil(filteredItems?.length / limit); // Calculate the maximum number of pages.
+		startIndex = (currentPage - 1) * limit;
+		endIndex = startIndex + limit;
+		maxPage = Math.ceil(filteredItems?.length / limit);
 
-		// If the current page number exceeds the maximum number of pages
 		if (currentPage > maxPage) {
-			currentPage = 1; // set the current page to be the last page.
+			currentPage = 1;
 
-			// recalculate the starting and ending indices for the last page
 			startIndex = (currentPage - 1) * limit;
 			endIndex = startIndex + limit;
 		}
 
-		// Get only those items from 'filteredItems' that belong to the current page.
 		paginatedItems = filteredItems?.slice(startIndex, endIndex);
 	};
 
@@ -245,13 +242,13 @@
 				<TableHeadCell>Full Name</TableHeadCell>
 				<TableHeadCell>Year Level</TableHeadCell>
 				<TableHeadCell>Course</TableHeadCell>
-				{#if paginatedItems.length}
+				{#if paginatedItems && paginatedItems.length}
 					<TableHeadCell>Edit</TableHeadCell>
 					<TableHeadCell>Remove</TableHeadCell>
 				{/if}
 			</TableHead>
 			<TableBody tableBodyClass="divide-y border border-zinc-300 max-h-40 overflow-y-auto">
-				{#if paginatedItems === undefined || paginatedItems?.length === 0}
+				{#if !paginatedItems || paginatedItems?.length === 0}
 					<TableBodyRow class="text-center">
 						<TableBodyCell>No data</TableBodyCell>
 						<TableBodyCell>No data</TableBodyCell>
