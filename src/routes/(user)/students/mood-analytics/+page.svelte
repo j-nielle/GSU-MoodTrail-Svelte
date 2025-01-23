@@ -112,13 +112,14 @@
 				schema: 'public',
 				table: 'StudentMoodEntries'
 			},
-			(payload) => {
+			async (payload) => {
 				if (payload.eventType === 'INSERT') {
 					newEntryAlert = true;
 
 					setTimeout(() => {
 						newEntryAlert = false;
 					}, 1000);
+					
 				}
 			}
 		);
@@ -128,11 +129,9 @@
 		};
 	});
 
-	$: if (selectedStudent) {
-		searchTerm = selectedStudent;
-	}
+	$: searchTerm = selectedStudent ? selectedStudent : searchTerm;
 
-	$: if (searchTerm) {
+	$: {
 		hasEntry = studentMoodData?.findLast((student) => student.student_id == searchTerm);
 		hasMoodEntries = hasEntry ? true : false;
 
