@@ -552,7 +552,7 @@
 				{:else if form?.error}
 					<Alert color="red" class="mb-2"><span class="font-medium">{form?.error}</span></Alert>
 				{/if}
-				{#if !hasMoodEntries && result}
+				{#if currentStudentID && result && !hasMoodEntries}
 					<Card class="max-w-full">
 						<div class="flex flex-row space-x-8">
 							<div class="self-start">
