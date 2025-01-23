@@ -387,6 +387,8 @@
 		delete newObj.mood_score;
 		delete newObj.reason_score;
 
+		if (newObj.created_by == null) newObj.created_by = 'KIOSK';
+
 		let orderedObj = {};
 
 		for (let key of keys) {
@@ -423,6 +425,8 @@
 	function selectReasonMarkType(reasonMarkType) {
 		selectedReasonMarkType = reasonMarkType;
 	}
+
+	$: console.log($exportStudentData)
 </script>
 
 <svelte:head>
