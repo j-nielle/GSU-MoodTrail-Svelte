@@ -163,7 +163,7 @@
 		}));
 
 		student = [...students]
-			.filter((student) => student.course_id === selectedCourse && yearLvl[student.year_level_id])
+			.filter((student) => student.course_id === selectedCourse && student.year_level_id === selectedYearLevel)
 			.map(({ student_id, student_name }) => ({
 				value: student_id,
 				name: student_id
