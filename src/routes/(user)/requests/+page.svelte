@@ -70,10 +70,6 @@
 	});
 
 	$: {
-		handleFilterRequests(requests, searchTerm, page, limit);
-	}
-
-	const handleFilterRequests = (requests, searchTerm, page, limit) => {
 		filteredItems = requests?.filter((req) => {
 			const phoneMatch = req.contact_num.includes(searchTerm);
 			const emailMatch = req?.email_address?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -113,7 +109,7 @@
 			paginatedItems = filteredItems?.slice(startIndex, endIndex);
 			maxPage = Math.ceil(filteredItems?.length / limit);
 		}
-	};
+	}
 
 	const toggleRequestStatus = async (req) => {
 		let isCompleted = req.iscompleted;
@@ -123,6 +119,7 @@
 				.update({ iscompleted: isCompleted })
 				.eq('id', req.id)
 				.select();
+			console.log(data, updateError);
 			if (updateError) throw updateError;
 		} catch (error) {
 			console.error(error);
