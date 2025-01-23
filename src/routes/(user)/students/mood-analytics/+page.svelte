@@ -425,8 +425,6 @@
 	function selectReasonMarkType(reasonMarkType) {
 		selectedReasonMarkType = reasonMarkType;
 	}
-
-	$: console.log($exportStudentData)
 </script>
 
 <svelte:head>
