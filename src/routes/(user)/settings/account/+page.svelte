@@ -13,7 +13,7 @@
 	export let form;
 
 	$: user = data.user;
-	$: role = user.user_metadata.role;
+	$: role = user.role;
 	$: username = user?.user_metadata?.username;
 	$: id = user?.id;
 

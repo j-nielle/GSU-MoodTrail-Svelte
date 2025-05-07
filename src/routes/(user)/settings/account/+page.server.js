@@ -13,6 +13,7 @@ export async function load({ locals: { supabase, getSession } }) {
 
 	try {
 		const { data: { user }, error } = await supabase.auth.getUser();
+		console.log(user)
 		if(error) throw error;
 		return {
 			user: user || []
